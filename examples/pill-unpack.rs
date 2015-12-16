@@ -96,24 +96,26 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
     (p, q)
 }
 
-pub fn cue(bits: &BitVec) -> Rc<Noun> {
-    return parse(0, bits, &mut HashMap::new()).1;
+pub fn cue(bits: &BitVec) -> (Rc<Noun>, u64) {
+    let (_, noun, size) = parse(0, bits, &mut HashMap::new());
+    return (noun, size);
 
-    fn parse(mut pos: usize, bits: &BitVec, dict: &mut HashMap<usize, Rc<Noun>>) -> (usize, Rc<Noun>) {
+    fn parse(mut pos: usize, bits: &BitVec, dict: &mut HashMap<usize, (Rc<Noun>, u64)>) -> (usize, Rc<Noun>, u64) {
         let key = pos;
         if bits[pos] {
             pos += 1;
             if !bits[pos] {
                 // 10: encode a pair.
                 pos += 1;
-                let (p, left) = parse(pos, bits, dict);
+                let (p, left, s1) = parse(pos, bits, dict);
                 pos = p;
-                let (p, right) = parse(pos, bits, dict);
+                let (p, right, s2) = parse(pos, bits, dict);
                 pos = p;
 
                 let ret = Rc::new(Noun::Cell(left, right));
-                dict.insert(key, ret.clone());
-                (pos, ret)
+                let size = s1 + s2;
+                dict.insert(key, (ret.clone(), size));
+                (pos, ret, size)
             } else {
                 // 11: Repeat element
                 // Read the index in bitstream where the value was first
@@ -121,15 +123,16 @@ pub fn cue(bits: &BitVec) -> Rc<Noun> {
                 let (p, q) = rub(&bits, pos);
                 pos += p;
                 let key = q.to_usize().unwrap();
-                (pos, dict.get(&key).unwrap().clone())
+                let (noun, size) = dict.get(&key).unwrap().clone();
+                (pos, noun, size)
             }
         } else {
             // Atom.
             let (p, q) = rub(&bits, pos);
             pos += p;
             let ret = Rc::new(Noun::Atom(q));
-            dict.insert(key, ret.clone());
-            (pos, ret)
+            dict.insert(key, (ret.clone(), 1));
+            (pos, ret, 1)
         }
     }
 }
@@ -155,7 +158,7 @@ fn main() {
 
     let bits = BitVec::from_bytes(&buf);
 
-    let cell = cue(&bits);
+    let (_cell, size) = cue(&bits);
 
-    println!("{}", cell);
+    println!("Pillfile {} consists of {} atoms", env::args().nth(1).unwrap(), size);
 }
