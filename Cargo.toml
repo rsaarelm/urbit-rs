@@ -7,9 +7,6 @@ repository = "https://github.com/rsaarelm/urbit-rs"
 license = "MIT"
 
 [dependencies]
+nock = { git = "https://github.com/rsaarelm/nock-rs" }
 num = "*"
 bit-vec = "*"
-
-[[example]]
-name = "pill-unpack"
-path = "examples/pill-unpack.rs"
