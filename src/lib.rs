@@ -1,5 +1,8 @@
 extern crate bit_vec;
 extern crate num;
+#[macro_use]
+extern crate nom;
+#[macro_use]
 extern crate nock;
 
 use std::rc::Rc;
@@ -8,6 +11,8 @@ use bit_vec::BitVec;
 use num::bigint::BigUint;
 use num::traits::{One, ToPrimitive};
 use nock::Noun;
+
+mod hoon;
 
 /// Unpack the data of an Urbit pillfile into a Nock noun.
 pub fn unpack_pill(mut buf: Vec<u8>) -> Result<nock::Noun, &'static str> {
