@@ -85,22 +85,29 @@ named!(hoon<Noun>,
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
     use nom::IResult;
     use nock::Noun;
-    use super::{gap, atom, pqr, wtcl};
+    use super::{gap, atom, pqr, wtcl, hoon};
 
     #[test]
-    fn test_parse_hoon() {
+    fn test_parse_atom() {
         assert_eq!(atom(&b"1234"[..]),
                    IResult::Done(&b""[..], Noun::Atom(1234)));
+    }
 
+    #[test]
+    fn test_parse_gap() {
         assert!(gap(&b"  "[..]).is_done());
         assert!(gap(&b"    "[..]).is_done());
         assert!(gap(&b"\n"[..]).is_done());
         assert!(gap(&b"\n  "[..]).is_done());
         assert!(gap(&b"  \n  "[..]).is_done());
         assert!(!gap(&b" "[..]).is_done());
+    }
 
+    #[test]
+    fn test_parse_hoon() {
         assert_eq!(pqr(&b"(1 2 3)"[..]),
                    IResult::Done(&b""[..], (Noun::Atom(1), Noun::Atom(2), Noun::Atom(3))));
         assert_eq!(pqr(&b"\n1\n2\n3"[..]),
@@ -114,5 +121,24 @@ mod test {
                    IResult::Done(&b""[..], n![6, 1, 2, 3]));
         assert_eq!(wtcl(&b"?:  1\n  2\n3"[..]),
                    IResult::Done(&b""[..], n![6, 1, 2, 3]));
+    }
+
+    #[test]
+    fn test_decrement() {
+        // Simple test case that needs quite a bit of machinery up and
+        // running.
+        let code = b"\
+            =>  a=.                     ::  line 1
+            =+  b=0                     ::  line 2
+            |-                          ::  line 3
+            ?:  =(a +(b))               ::  line 4
+              b                         ::  line 5
+            $(b +(b))                   ::  line 6";
+        if let IResult::Done(_, noun) = hoon(&code[..]) {
+            assert_eq!(n![42, noun].nock(),
+                Ok(Rc::new(Noun::Atom(41))));
+        } else {
+            panic!("Failed to parse decrement code");
+        }
     }
 }
