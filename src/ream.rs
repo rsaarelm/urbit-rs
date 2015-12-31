@@ -70,6 +70,14 @@ named!(pub ream<Twig>,
     )
 );
 
+named!(comment<&[u8]>,
+    chain!(
+        tag!("::") ~
+        x: take_until_and_consume!("\n"),
+        || { x }
+    )
+);
+
 // TODO: Handle separator dots
 // TODO: Handle other odors than ud.
 named!(atom<Twig>,
