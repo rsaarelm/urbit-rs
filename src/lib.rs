@@ -19,7 +19,7 @@ mod twig;
 mod ream;
 
 /// Unpack the data of an Urbit pillfile into a Nock noun.
-pub fn unpack_pill(mut buf: Vec<u8>) -> Result<nock::Noun, &'static str> {
+pub fn unpack_pill(mut buf: Vec<u8>) -> Result<Noun, &'static str> {
     // Guarantee that the buffer is made of 32-bit chunks.
     while buf.len() % 4 != 0 {
         buf.push(0);
@@ -35,8 +35,7 @@ pub fn unpack_pill(mut buf: Vec<u8>) -> Result<nock::Noun, &'static str> {
 
     let bits = BitVec::from_bytes(&buf);
 
-    let (noun, _size) = try!(cue(&bits));
-    Ok(noun)
+    cue(&bits)
 }
 
 /// Decode a lenght-encoded atom from a bit stream.
@@ -81,30 +80,29 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
 
 /// Decode an encoded cell from a bit stream.
 ///
-/// Return the Nock noun and the count of atoms in it.
-fn cue(bits: &BitVec) -> Result<(Noun, u64), &'static str> {
-    let (_, noun, size) = try!(parse(0, bits, &mut HashMap::new()));
-    return Ok(((*noun.clone()).clone(), size));
+/// Return the Nock noun.
+fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
+    let (_, noun) = try!(parse(0, bits, &mut HashMap::new()));
+    return Ok((*noun.clone()).clone());
 
     fn parse(mut pos: usize,
              bits: &BitVec,
-             dict: &mut HashMap<usize, (Rc<Noun>, u64)>)
-             -> Result<(usize, Rc<Noun>, u64), &'static str> {
+             dict: &mut HashMap<usize, Rc<Noun>>)
+             -> Result<(usize, Rc<Noun>), &'static str> {
         let key = pos;
         if bits[pos] {
             pos += 1;
             if !bits[pos] {
                 // 10: encode a pair.
                 pos += 1;
-                let (p, left, s1) = try!(parse(pos, bits, dict));
+                let (p, left) = try!(parse(pos, bits, dict));
                 pos = p;
-                let (p, right, s2) = try!(parse(pos, bits, dict));
+                let (p, right) = try!(parse(pos, bits, dict));
                 pos = p;
 
                 let ret = Rc::new(Noun::Cell(left, right));
-                let size = s1 + s2;
-                dict.insert(key, (ret.clone(), size));
-                Ok((pos, ret, size))
+                dict.insert(key, ret.clone());
+                Ok((pos, ret))
             } else {
                 // 11: Repeat element
                 // Read the index in bitstream where the value was first
@@ -112,9 +110,8 @@ fn cue(bits: &BitVec) -> Result<(Noun, u64), &'static str> {
                 let (p, q) = rub(&bits, pos);
                 pos += p;
                 let key = q.to_usize().unwrap();
-                if let Some(ref x) = dict.get(&key) {
-                    let (noun, size) = (x.0.clone(), x.1);
-                    Ok((pos, noun, size))
+                if let Some(x) = dict.get(&key) {
+                    Ok((pos, x.clone()))
                 } else {
                     Err("Bad cell index")
                 }
@@ -124,8 +121,8 @@ fn cue(bits: &BitVec) -> Result<(Noun, u64), &'static str> {
             let (p, q) = rub(&bits, pos);
             pos += p;
             let ret = Rc::new(Noun::from_biguint(q));
-            dict.insert(key, (ret.clone(), 1));
-            Ok((pos, ret, 1))
+            dict.insert(key, ret.clone());
+            Ok((pos, ret))
         }
     }
 }
