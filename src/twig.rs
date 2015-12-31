@@ -17,12 +17,18 @@ pub type Tram = Vec<(Wing, Box<Twig>)>;
 /// See ++twig in Urbit's hoon.hoon for reference.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Twig {
+    Brhp(Box<Twig>), // kicked dry trap
+
+    Dtls(Box<Twig>), // Nock increment
+    Dtts(Box<Twig>, Box<Twig>), // Nock equality
+
     Cnts(Wing, Tram), // eval p with changes from q
 
     Dtzy(Term, Atom), // atom constant
 
-    Ktts(Term, Box<Twig>), // toga
+    Ktts(Box<Twig>, Box<Twig>), // toga
 
+    Tsgr(Box<Twig>, Box<Twig>), // set p as subject of q
     Tsls(Box<Twig>, Box<Twig>), // push p on subject of q
 
     Wtcl(Box<Twig>, Box<Twig>, Box<Twig>), // if-then-else
@@ -90,6 +96,22 @@ mod test {
     fn test_atom() {
         evals("0", "0");
         evals("123", "123");
+    }
+
+    #[test]
+    fn test_simplified_decrement() {
+        // Simplified version that doesn't use irregular runes.
+        evals(
+           "=>  42
+            =>  ^=(a .)
+            =+  b=0
+            |-
+            ?:  .=(a +(b))
+              b
+            %=($ b .+(b))",
+
+            "41"
+            );
     }
 
     #[test]
