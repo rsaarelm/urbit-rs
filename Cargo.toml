@@ -11,3 +11,7 @@ nock = { git = "https://github.com/rsaarelm/nock-rs" }
 num = "*"
 bit-vec = "*"
 nom = "*"
+
+[[example]]
+name = "urbit"
+path = "examples/urbit.rs"
