@@ -6,7 +6,7 @@ use nom::*;
 use nom::IResult::*;
 use nom::Err::*;
 
-use twig::{Twig, Wing};
+use twig::{Twig, Rune, Odor};
 
 #[inline]
 pub fn is_lowercase(chr: u8) -> bool {
@@ -64,6 +64,7 @@ pub fn ident(input:&[u8]) -> IResult<&[u8], &[u8]> {
 named!(pub ream<Twig>,
     alt!(
         ud
+        /*
       | Brhp
       | Dtls
       | Dtts
@@ -71,6 +72,7 @@ named!(pub ream<Twig>,
       | Tsgr
       | Tsls
       | Wtcl
+      */
 
         // TODO: Rest of hoon
     )
@@ -105,7 +107,9 @@ named!(ud<Twig>,
       ),
       FromStr::from_str
     ),
-    |x| Ok::<Twig, ()>(Twig::Dtzy("ud".to_string(), x))
+    |x| Ok::<Twig, ()>(Twig::Cell(
+            box Twig::Rune(Rune::dtzy),
+            box Twig::Atom(Odor::ud, x)))
   )
 );
 
@@ -161,6 +165,7 @@ macro_rules! rune_args {
     };
 }
 
+/*
 named!(p<(Box<Twig>)>,
     alt!(
         chain!(
@@ -276,7 +281,6 @@ named!(wing<Wing>,
     )
 );
 
-
 rune1!(Brhp, "|-");
 rune1!(Dtls, ".+");
 rune2!(Dtts, ".=");
@@ -284,6 +288,7 @@ rune2!(Ktts, "^=");
 rune2!(Tsgr, "=>");
 rune2!(Tsls, "=+");
 rune3!(Wtcl, "?:");
+*/
 
 /*
 named!(Cnts<Twig>,
@@ -317,18 +322,7 @@ named!(Cnts<Twig>,
 
 #[cfg(test)]
 mod test {
-    use num::FromPrimitive;
-    use num::bigint::BigUint;
-    use nom::IResult;
-    use twig::Twig;
-    use super::{gap, ream};
-
-    #[test]
-    fn test_parse_atom() {
-        assert_eq!(ream(&b"1234"[..]),
-                   IResult::Done(&b""[..],
-                 Twig::Dtzy("ud".to_string(), BigUint::from_u32(1234).unwrap())));
-    }
+    use super::gap;
 
     #[test]
     fn test_parse_gap() {

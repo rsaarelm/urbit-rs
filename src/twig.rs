@@ -1,40 +1,42 @@
+#![allow(non_camel_case_types)]
+
 use num::bigint::BigUint;
 use nom::IResult;
 use nock::Noun;
 use ream::ream;
 
-/// Nock atom, an arbitrary-size unsigned integer.
-pub type Atom = BigUint;
-/// A Hoon symbol.
-pub type Term = String;
-/// A path of names.
-pub type Wing = Vec<String>;
-/// A list of bindings.
-pub type Tram = Vec<(Wing, Box<Twig>)>;
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Rune {
+    brhp, // kicked dry trap
+    dtls, // Nock increment
+    dtts, // Nock equality
+    cnts, // eval p with changes from q
+    dtzy, // atom constant
+    kttz, // wrap value in toga
+    tsgr, // set p as subject of q
+    tsls, // push p on subject of q
+    wtcl, // if-then-else
+
+    // TODO: Fill out the rest.
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Odor {
+    ud, // unsigned integer
+
+    // TODO: Fill out the rest.
+}
 
 /// Rust-native representation for Hoon's abstract syntax trees.
 ///
 /// See ++twig in Urbit's hoon.hoon for reference.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Twig {
-    Brhp(Box<Twig>), // kicked dry trap
-
-    Dtls(Box<Twig>), // Nock increment
-    Dtts(Box<Twig>, Box<Twig>), // Nock equality
-
-    Cnts(Wing, Tram), // eval p with changes from q
-
-    Dtzy(Term, Atom), // atom constant
-
-    Ktts(Box<Twig>, Box<Twig>), // toga
-
-    Tsgr(Box<Twig>, Box<Twig>), // set p as subject of q
-    Tsls(Box<Twig>, Box<Twig>), // push p on subject of q
-
-    Wtcl(Box<Twig>, Box<Twig>, Box<Twig>), // if-then-else
+    Cell(Box<Twig>, Box<Twig>),
+    Rune(Rune),
+    Atom(Odor, BigUint),
+    Wing(Vec<String>),
 }
-
-use Twig::*;
 
 pub enum CompileError {
     ParseError,
@@ -47,8 +49,11 @@ pub enum CompileError {
 impl Twig {
     /// Compile a twig into a Nock formula.
     pub fn ut(&self) -> Result<Noun, CompileError> {
+
         match self {
-            &Dtzy(_, ref atom) => Ok(n![1, atom.clone()]),
+            // Constant.
+            &Twig::Cell(box Twig::Rune(Rune::dtzy), box Twig::Atom(_, ref atom)) =>
+                Ok(n![1, atom.clone()]),
 
             // TODO
             _ => Err(CompileError::CompileError),

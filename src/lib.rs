@@ -1,3 +1,5 @@
+#![feature(box_syntax, box_patterns)]
+
 extern crate bit_vec;
 extern crate num;
 #[macro_use]
