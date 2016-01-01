@@ -119,6 +119,48 @@ named!(id<&str>,
     )
 );
 
+/// Terminator for an arbitrary-length tall rune.
+named!(tall_terminator<()>,
+    chain!(
+        gap
+      ~ tag!("=="),
+      || ()
+    )
+);
+
+/// For any tall form rune argument that must be preceded with a gap.
+macro_rules! tall_arg {
+    ($inner: tt) => {
+        chain!(
+            gap
+       ~ x: $inner,
+         || { x }
+        )
+    }
+}
+
+/// For the wide form rune arguments after the first one that must be preceded
+/// with a single space.
+macro_rules! wide_arg_tail {
+    ($inner: tt) => {
+        chain!(
+            tag!(" ")
+       ~ x: $inner,
+         || { x }
+        )
+    }
+}
+
+/// A standard rune that may have either a wide or a tall form.
+macro_rules! rune_args {
+    ($first: tt) => {
+        // TODO
+    };
+    ($first: tt, $($rest: tt),+) => {
+        // TODO
+    };
+}
+
 named!(p<(Box<Twig>)>,
     alt!(
         chain!(
