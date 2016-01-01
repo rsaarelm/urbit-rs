@@ -12,7 +12,7 @@ pub enum Rune {
     dtts, // Nock equality
     cnts, // eval p with changes from q
     dtzy, // atom constant
-    kttz, // wrap value in toga
+    ktts, // wrap value in toga
     tsgr, // set p as subject of q
     tsls, // push p on subject of q
     wtcl, // if-then-else
@@ -29,7 +29,7 @@ impl Rune {
             dtts => ".=",
             cnts => "%=",
             dtzy => panic!("Internal rune"),
-            kttz => "^=",
+            ktts => "^=",
             tsgr => "=>",
             tsls => "=+",
             wtcl => "?:",
