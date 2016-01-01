@@ -8,8 +8,13 @@ use nom::Err::*;
 
 use twig::{Twig, Wing};
 
+#[inline]
+pub fn is_lowercase(chr: u8) -> bool {
+    chr >= 'a' as u8 && chr <= 'z' as u8
+}
+
 /// Match at least two spaces or one newline.
-pub fn gap(input: &[u8]) -> IResult<&[u8], &[u8]> {
+pub fn long_space(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let mut spaces = 0;
     let mut idx = 0;
     for item in input.iter() {
@@ -21,11 +26,11 @@ pub fn gap(input: &[u8]) -> IResult<&[u8], &[u8]> {
 
         if *item == '\n' as u8 {
             spaces += 2;
-        } else if is_space(*item) {
+        } else if *item == ' ' as u8 {
             spaces += 1;
         }
 
-        if !is_space(*item) && *item != '\r' as u8 && *item != '\n' as u8 {
+        if *item != ' ' as u8 && *item != '\r' as u8 && *item != '\n' as u8 {
             break;
         }
 
@@ -42,6 +47,7 @@ pub fn gap(input: &[u8]) -> IResult<&[u8], &[u8]> {
 pub fn ident(input:&[u8]) -> IResult<&[u8], &[u8]> {
     for (idx, item) in input.iter().enumerate() {
         if idx == 0 {
+            // TODO: Should we only accept lowercase chars?
             if !is_alphabetic(*item) {
                 return Error(Position(ErrorKind::Alpha, input))
             }
@@ -57,7 +63,7 @@ pub fn ident(input:&[u8]) -> IResult<&[u8], &[u8]> {
 /// Parse a Hoon expression into an AST.
 named!(pub ream<Twig>,
     alt!(
-        atom
+        ud
       | Brhp
       | Dtls
       | Dtts
@@ -78,9 +84,19 @@ named!(comment<&[u8]>,
     )
 );
 
+// A valid gap is any sequence of long spaces and comments.
+named!(gap< Vec<&[u8]> >,
+    many1!(
+        alt!(
+            long_space
+          | comment
+        )
+    )
+);
+
 // TODO: Handle separator dots
 // TODO: Handle other odors than ud.
-named!(atom<Twig>,
+named!(ud<Twig>,
   map_res!(
     map_res!(
       map_res!(
@@ -93,6 +109,9 @@ named!(atom<Twig>,
   )
 );
 
+// TODO: Don't have two different-named identifier parsers that differ just on
+// having the from_utf8...
+/// Parse an identifier name.
 named!(id<&str>,
     map_res!(
         ident,
@@ -256,18 +275,17 @@ named!(Cnts<Twig>,
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
     use num::FromPrimitive;
     use num::bigint::BigUint;
     use nom::IResult;
     use twig::Twig;
-    use super::{gap, atom, ream};
+    use super::{gap, ream};
 
     #[test]
     fn test_parse_atom() {
         assert_eq!(ream(&b"1234"[..]),
                    IResult::Done(&b""[..],
-                                 Twig::Dtzy("ud".to_string(), BigUint::from_u32(1234).unwrap())));
+                 Twig::Dtzy("ud".to_string(), BigUint::from_u32(1234).unwrap())));
     }
 
     #[test]
