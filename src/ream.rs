@@ -60,24 +60,6 @@ pub fn ident(input:&[u8]) -> IResult<&[u8], &[u8]> {
     Error(Position(ErrorKind::Alpha, input))
 }
 
-/// Parse a Hoon expression into an AST.
-named!(pub ream<Twig>,
-    alt!(
-        ud
-        /*
-      | Brhp
-      | Dtls
-      | Dtts
-      | Ktts
-      | Tsgr
-      | Tsls
-      | Wtcl
-      */
-
-        // TODO: Rest of hoon
-    )
-);
-
 named!(comment<&[u8]>,
     chain!(
         tag!("::") ~
@@ -126,44 +108,89 @@ named!(id<&str>,
 /// Terminator for an arbitrary-length tall rune.
 named!(tall_terminator<()>,
     chain!(
-        gap
-      ~ tag!("=="),
+        gap ~
+        tag!("=="),
       || ()
     )
 );
 
-/// For any tall form rune argument that must be preceded with a gap.
-macro_rules! tall_arg {
-    ($inner: tt) => {
+
+macro_rules! tall_rune_args {
+    ($first: tt) => {
         chain!(
-            gap
-       ~ x: $inner,
+            x: $first ~
+            gap,
          || { x }
-        )
-    }
+         )
+    };
+    ($first: tt, $($rest: tt),+) => {
+        chain!(
+            x: $first ~
+            gap ~
+            xs: tall_rune_args!($($rest),*),
+         || { Twig::Cell(box x, box xs) }
+         )
+    };
 }
 
-/// For the wide form rune arguments after the first one that must be preceded
-/// with a single space.
-macro_rules! wide_arg_tail {
-    ($inner: tt) => {
+macro_rules! wide_rune_args {
+    ($first: tt) => {
         chain!(
-            tag!(" ")
-       ~ x: $inner,
+            x: $first ~
+            tag!(")"),
          || { x }
-        )
-    }
+         )
+    };
+    ($first: tt, $($rest: tt),+) => {
+        chain!(
+            x: $first ~
+            tag!(" ") ~
+            xs: wide_rune_args!($($rest),*),
+         || { Twig::Cell(box x, box xs) }
+         )
+    };
 }
 
 /// A standard rune that may have either a wide or a tall form.
-macro_rules! rune_args {
-    ($first: tt) => {
-        // TODO
-    };
-    ($first: tt, $($rest: tt),+) => {
-        // TODO
-    };
+macro_rules! rune {
+    ($name:ident, $($parser: tt),+) => {
+        chain!(
+            tag!(Rune::$name.glyph()) ~
+            args: alt!(
+                chain!(
+                    tag!("(") ~
+                    args: wide_rune_args($($parser),*),
+                    || { args }
+                ) |
+                chain!(
+                    gap ~
+                    args: tall_rune_args($($parser),*),
+                    || { args }
+                )
+            ),
+            || { Twig::Cell(box Twig::Rune(Rune::$name), box args) }
+        )
+    }
 }
+
+/// Parse a Hoon expression into an AST.
+named!(pub ream<Twig>,
+    alt!(
+        rune!(brhp, ream) |
+        ud
+        /*
+      | Brhp
+      | Dtls
+      | Dtts
+      | Ktts
+      | Tsgr
+      | Tsls
+      | Wtcl
+      */
+
+        // TODO: Rest of hoon
+    )
+);
 
 /*
 named!(p<(Box<Twig>)>,

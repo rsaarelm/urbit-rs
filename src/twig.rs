@@ -20,6 +20,23 @@ pub enum Rune {
     // TODO: Fill out the rest.
 }
 
+impl Rune {
+    pub fn glyph(self) -> &'static str {
+        use self::Rune::*;
+        match self {
+            brhp => "|-",
+            dtls => ".+",
+            dtts => ".=",
+            cnts => "%=",
+            dtzy => panic!("Internal rune"),
+            kttz => "^=",
+            tsgr => "=>",
+            tsls => "=+",
+            wtcl => "?:",
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Odor {
     ud, // unsigned integer
