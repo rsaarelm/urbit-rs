@@ -116,15 +116,15 @@ named!(tall_terminator<()>,
 
 
 macro_rules! tall_rune_args {
-    ($first: tt) => {
-        chain!(
+    ($i: expr, $first: tt) => {
+        chain!($i,
             x: $first ~
             gap,
          || { x }
          )
     };
-    ($first: tt, $($rest: tt),+) => {
-        chain!(
+    ($i: expr, $first: tt, $($rest: tt),+) => {
+        chain!($i,
             x: $first ~
             gap ~
             xs: tall_rune_args!($($rest),*),
@@ -134,15 +134,15 @@ macro_rules! tall_rune_args {
 }
 
 macro_rules! wide_rune_args {
-    ($first: tt) => {
-        chain!(
+    ($i: expr, $first: tt) => {
+        chain!($i,
             x: $first ~
             tag!(")"),
          || { x }
          )
     };
-    ($first: tt, $($rest: tt),+) => {
-        chain!(
+    ($i: expr, $first: tt, $($rest: tt),+) => {
+        chain!($i,
             x: $first ~
             tag!(" ") ~
             xs: wide_rune_args!($($rest),*),
@@ -153,18 +153,18 @@ macro_rules! wide_rune_args {
 
 /// A standard rune that may have either a wide or a tall form.
 macro_rules! rune {
-    ($name:ident, $($parser: tt),+) => {
-        chain!(
+    ($i: expr, $name:ident, $($parser: tt),+) => {
+        chain!($i,
             tag!(Rune::$name.glyph()) ~
             args: alt!(
                 chain!(
                     tag!("(") ~
-                    args: wide_rune_args($($parser),*),
+                    args: wide_rune_args!($($parser),*),
                     || { args }
                 ) |
                 chain!(
                     gap ~
-                    args: tall_rune_args($($parser),*),
+                    args: tall_rune_args!($($parser),*),
                     || { args }
                 )
             ),
