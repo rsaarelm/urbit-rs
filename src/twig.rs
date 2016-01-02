@@ -347,21 +347,22 @@ mod test {
     use ream::ream;
 
     fn evals(input: &str, output: &str) {
-        if let Ok((tail, twig)) = ream(input.as_bytes()) {
-            let formula = twig.ut().ok().expect("Compile failed");
-            // Nock the formula against an empty subject.
-            // Might want to allow passing a subject in evals interface.
-            let result = Noun::Cell(Rc::new(Noun::Atom(0)), Rc::new(formula))
-                             .nock()
-                             .ok()
-                             .expect("Eval failed");
+        match ream(input.as_bytes()) {
+            Ok((tail, twig)) => {
+                let formula = twig.ut().ok().expect("Compile failed");
+                // Nock the formula against an empty subject.
+                // Might want to allow passing a subject in evals interface.
+                let result = Noun::Cell(Rc::new(Noun::Atom(0)), Rc::new(formula))
+                    .nock()
+                    .ok()
+                    .expect("Eval failed");
 
-            assert_eq!(format!("{}", result), output);
-            assert!(tail == &b""[..],
-                    format!("Unparsed suffix left in input: '{}'",
-                            str::from_utf8(tail).unwrap()));
-        } else {
-            panic!("Parse error");
+                assert_eq!(format!("{}", result), output);
+                assert!(tail == &b""[..],
+                        format!("Unparsed suffix left in input: '{}'",
+                                str::from_utf8(tail).unwrap()));
+            }
+            Err(e) => panic!("Parsing failed after {}", str::from_utf8(e).unwrap())
         }
     }
 
@@ -393,9 +394,9 @@ mod test {
         evals(
            "=>  42
             =>  ^=(a .)
-            =+  b=0
+            =+  ^=(b 0)
             |-
-            ?:  .=(a +(b))
+            ?:  .=(a .+(b))
               b
             %=($ b .+(b))",
 
