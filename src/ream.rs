@@ -28,6 +28,7 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
 
     if let Ok(x) = atom(input) { return Ok(x); }
+    if let Ok(x) = wing(input) { return Ok(x); }
 
     // Just crunch through the whole set of rune data and look for all the
     // ones that look like they can be parsed naively.
@@ -133,6 +134,40 @@ fn ud(input: &[u8]) -> ParseResult<BigUint> {
     Ok((&input[idx..], FromStr::from_str(&num).unwrap()))
 }
 
+fn wing(input: &[u8]) -> ParseResult<Twig> {
+    // TODO: Dotted forms expanding to multi-term wings.
+    let (input, term) = try!(term(input));
+    let s = str::from_utf8(term).unwrap().to_string();
+    Ok((input, Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(vec![s]))))
+}
+
+fn term(input: &[u8]) -> ParseResult<&[u8]> {
+    let mut idx = 0;
+    for i in input.iter() {
+        if idx == 0 && *i == '$' as u8 {
+            // Special $
+            if input.len() > 1 && !is_ident_middle(input[1]) {
+                // Can't have something like $foo.
+                return Err(input);
+            }
+            idx += 1;
+            break;
+        }
+
+        if idx == 0 && !is_ident_start(*i) { break; }
+
+        if idx > 0 && !is_ident_middle(*i) { break; }
+
+        idx += 1;
+    }
+
+    if idx == 0 {
+        Err(input)
+    } else {
+        Ok((&input[idx..], &input[..idx]))
+    }
+}
+
 fn space_or_comment(input: &[u8]) -> ParseResult<()> {
     let mut tail = input;
     loop {
@@ -196,6 +231,14 @@ fn is_lowercase(c: u8) -> bool {
     c >= 'a' as u8 && c <= 'z' as u8
 }
 
+fn is_numeric(c: u8) -> bool {
+    c >= '0' as u8 && c <= '9' as u8
+}
+
+fn is_ident_start(c: u8) -> bool { is_lowercase(c) }
+
+fn is_ident_middle(c: u8) -> bool { is_lowercase(c) || is_numeric(c) || c == '-' as u8 }
+
 fn tag<'a>(input: &'a[u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
     let prefix = prefix.as_bytes();
     if input.len() < prefix.len() {
@@ -217,6 +260,5 @@ fn split_after(input: &[u8], c: u8) -> ParseResult<&[u8]> {
         }
         idx += 1;
     }
-    println!("Split at {}", idx);
     Ok((&input[idx..], &input[0..idx]))
 }
