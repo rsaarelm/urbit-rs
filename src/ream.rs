@@ -26,6 +26,71 @@ pub fn ream(mut input: &[u8]) -> ParseResult<Twig> {
     atom(input)
 }
 
+fn twig(input: &[u8]) -> ParseResult<Twig> {
+    use twig::Rune::*;
+
+    if let Ok(x) = rune(input, tsgr, 2) { return Ok(x); }
+
+    Err(input)
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Form {
+    Tall,
+    Wide
+}
+
+fn rune<'a>(input: &'a[u8], rune: Rune, n: usize) -> ParseResult<'a, Twig> {
+    let (input, form) = try!(rune_start(input, rune.glyph()));
+    let (input, args) = try!(rune_args(input, form, n));
+    Ok((input, Twig::Cell(box Twig::Rune(rune), box args)))
+}
+
+/// Parse the start of a rune with the given glyph and determine if the rune
+/// is in wide form (.*(p q) or tall form (.*  p  q).
+fn rune_start<'a>(input: &'a[u8], glyph: &str) -> ParseResult<'a, Form> {
+    assert!(glyph.len() == 2, "Rune isn't 2 characters");
+    let (mut tail, _) = try!(tag(input, glyph));
+
+    if let Ok((tail, _)) = tag(tail, "(") {
+        return Ok((tail, Form::Wide));
+    }
+
+    if let Ok((tail, _)) = gap(tail) {
+        return Ok((tail, Form::Tall));
+    }
+
+    Err(input)
+}
+
+fn rune_args(input: &[u8], form: Form, n: usize) -> ParseResult<Twig> {
+    assert!(n > 0);
+    if n == 1 {
+        let (input, p) = try!(twig(input));
+        let (input, _) = try!(rune_end(input, form));
+        Ok((input, p))
+    } else {
+        let (input, p) = try!(twig(input));
+        let (input, _) = try!(rune_sep(input, form));
+        let (input, ps) = try!(rune_args(input, form, n - 1));
+        Ok((input, Twig::Cell(box p, box ps)))
+    }
+}
+
+fn rune_sep(input: &[u8], form: Form) -> ParseResult<&[u8]> {
+    match form {
+        Form::Tall => gap(input),
+        Form::Wide => tag(input, " ")
+    }
+}
+
+fn rune_end(input: &[u8], form: Form) -> ParseResult<&[u8]> {
+    match form {
+        Form::Tall => Ok((input, &input[..0])),
+        Form::Wide => tag(input, ")")
+    }
+}
+
 fn atom(input: &[u8]) -> ParseResult<Twig> {
     if let Ok((tail, num)) = ud(input) {
         Ok((tail,
@@ -82,8 +147,33 @@ fn space_or_comment(input: &[u8]) -> ParseResult<()> {
     }
 }
 
+/// At least one newline or at least two spaces.
+///
+/// Used to separate tall forms in Hoon.
+fn gap(input: &[u8]) -> ParseResult<&[u8]> {
+    let mut spaces = 0;
+    let mut idx = 0;
+    for i in input.iter() {
+        if *i == '\n' as u8 {
+            spaces += 2;
+        } else if is_whitespace(*i) {
+            spaces += 1;
+        } else {
+            break;
+        }
+
+        idx += 1;
+    }
+
+    if spaces < 2 {
+        Err(input)
+    } else {
+        Ok((&input[idx..], &input[0..idx]))
+    }
+}
+
 fn comment(input: &[u8]) -> ParseResult<()> {
-    if starts_with(input, "::") {
+    if let Ok(_) = tag(input, "::") {
         Ok((split_after(input, '\n' as u8).0, ()))
     } else {
         Err(input)
@@ -100,17 +190,17 @@ fn is_lowercase(c: u8) -> bool {
     c >= 'a' as u8 && c <= 'z' as u8
 }
 
-fn starts_with(input: &[u8], prefix: &str) -> bool {
+fn tag<'a>(input: &'a[u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
     let prefix = prefix.as_bytes();
     if input.len() < prefix.len() {
-        return false;
+        return Err(input);
     }
 
     for (x, y) in prefix.iter().zip(input.iter()) {
-        if x != y { return false; }
+        if x != y { return Err(input); }
     }
 
-    true
+    Ok((&input[prefix.len()..], &input[0..prefix.len()]))
 }
 
 fn split_after(input: &[u8], c: u8) -> (&[u8], &[u8]) {

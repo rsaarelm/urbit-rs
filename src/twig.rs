@@ -4,7 +4,7 @@ use num::bigint::BigUint;
 use nock::Noun;
 use ream::ream;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Rune {
     brhp, // kicked dry trap
     dtls, // Nock increment
@@ -36,7 +36,7 @@ impl Rune {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Odor {
     ud, // unsigned integer
 
@@ -54,6 +54,7 @@ pub enum Twig {
     Wing(Vec<String>),
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum CompileError {
     ParseError,
     CompileError,
