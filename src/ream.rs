@@ -27,14 +27,20 @@ pub fn ream(mut input: &[u8]) -> ParseResult<Twig> {
 fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
 
-    if let Ok(x) = atom(input) { return Ok(x); }
-    if let Ok(x) = wing(input) { return Ok(x); }
+    if let Ok(x) = atom(input) {
+        return Ok(x);
+    }
+    if let Ok(x) = wing(input) {
+        return Ok(x);
+    }
 
     // Just crunch through the whole set of rune data and look for all the
     // ones that look like they can be parsed naively.
     for i in twig::RUNES.iter() {
         if i.rune.is_regular() && i.rune.glyph().is_some() {
-            if let Ok(x) = rune(input, i.rune) { return Ok(x); }
+            if let Ok(x) = rune(input, i.rune) {
+                return Ok(x);
+            }
         }
     }
 
@@ -44,11 +50,12 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum Form {
     Tall,
-    Wide
+    Wide,
 }
 
-fn rune<'a>(input: &'a[u8], rune: Rune) -> ParseResult<'a, Twig> {
-    assert!(rune.is_regular(), "Can't use standard parser on this type of rune!");
+fn rune<'a>(input: &'a [u8], rune: Rune) -> ParseResult<'a, Twig> {
+    assert!(rune.is_regular(),
+            "Can't use standard parser on this type of rune!");
     let glyph = rune.glyph().expect("Trying to parse an unprintable rune");
     let (input, form) = try!(rune_start(input, &glyph));
     let (input, args) = try!(rune_args(input, form, rune.arity()));
@@ -57,7 +64,7 @@ fn rune<'a>(input: &'a[u8], rune: Rune) -> ParseResult<'a, Twig> {
 
 /// Parse the start of a rune with the given glyph and determine if the rune
 /// is in wide form (.*(p q) or tall form (.*  p  q).
-fn rune_start<'a>(input: &'a[u8], glyph: &str) -> ParseResult<'a, Form> {
+fn rune_start<'a>(input: &'a [u8], glyph: &str) -> ParseResult<'a, Form> {
     assert!(glyph.len() == 2, "Rune isn't 2 characters");
     let (mut tail, _) = try!(tag(input, glyph));
 
@@ -89,23 +96,21 @@ fn rune_args(input: &[u8], form: Form, n: usize) -> ParseResult<Twig> {
 fn rune_sep(input: &[u8], form: Form) -> ParseResult<&[u8]> {
     match form {
         Form::Tall => gap(input),
-        Form::Wide => tag(input, " ")
+        Form::Wide => tag(input, " "),
     }
 }
 
 fn rune_end(input: &[u8], form: Form) -> ParseResult<&[u8]> {
     match form {
         Form::Tall => Ok((input, &input[..0])),
-        Form::Wide => tag(input, ")")
+        Form::Wide => tag(input, ")"),
     }
 }
 
 fn atom(input: &[u8]) -> ParseResult<Twig> {
     if let Ok((tail, num)) = ud(input) {
         Ok((tail,
-            Twig::Cell(
-                box Twig::Rune(Rune::dtzy),
-                box Twig::Atom(Odor::ud, num))))
+            Twig::Cell(box Twig::Rune(Rune::dtzy), box Twig::Atom(Odor::ud, num))))
     } else {
         Err(input)
     }
@@ -118,14 +123,15 @@ fn ud(input: &[u8]) -> ParseResult<BigUint> {
     for c in input.iter() {
         if *c >= '0' as u8 && *c <= '9' as u8 {
             num.push(*c as char);
-        }
-        else if idx > 0 && *c == '.' as u8 {
+        } else if idx > 0 && *c == '.' as u8 {
             // Ignore separator dots.
             // We're lazy, so we let them show up in any pattern after the
             // initial digit instead of insisting that they group the digits
             // in sized groups.
         } else {
-            if idx == 0 { return Err(input); }
+            if idx == 0 {
+                return Err(input);
+            }
             break;
         }
         idx += 1;
@@ -138,7 +144,8 @@ fn wing(input: &[u8]) -> ParseResult<Twig> {
     // TODO: Dotted forms expanding to multi-term wings.
     let (input, term) = try!(term(input));
     let s = str::from_utf8(term).unwrap().to_string();
-    Ok((input, Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(vec![s]))))
+    Ok((input,
+        Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(vec![s]))))
 }
 
 fn term(input: &[u8]) -> ParseResult<&[u8]> {
@@ -154,9 +161,13 @@ fn term(input: &[u8]) -> ParseResult<&[u8]> {
             break;
         }
 
-        if idx == 0 && !is_ident_start(*i) { break; }
+        if idx == 0 && !is_ident_start(*i) {
+            break;
+        }
 
-        if idx > 0 && !is_ident_middle(*i) { break; }
+        if idx > 0 && !is_ident_middle(*i) {
+            break;
+        }
 
         idx += 1;
     }
@@ -235,18 +246,24 @@ fn is_numeric(c: u8) -> bool {
     c >= '0' as u8 && c <= '9' as u8
 }
 
-fn is_ident_start(c: u8) -> bool { is_lowercase(c) }
+fn is_ident_start(c: u8) -> bool {
+    is_lowercase(c)
+}
 
-fn is_ident_middle(c: u8) -> bool { is_lowercase(c) || is_numeric(c) || c == '-' as u8 }
+fn is_ident_middle(c: u8) -> bool {
+    is_lowercase(c) || is_numeric(c) || c == '-' as u8
+}
 
-fn tag<'a>(input: &'a[u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
+fn tag<'a>(input: &'a [u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
     let prefix = prefix.as_bytes();
     if input.len() < prefix.len() {
         return Err(input);
     }
 
     for (x, y) in prefix.iter().zip(input.iter()) {
-        if x != y { return Err(input); }
+        if x != y {
+            return Err(input);
+        }
     }
 
     Ok((&input[prefix.len()..], &input[0..prefix.len()]))

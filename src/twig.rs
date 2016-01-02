@@ -19,7 +19,7 @@ pub enum Type {
     Spot,
     Tyre,
 
-// Ones below need special parsing.
+    // Ones below need special parsing.
     Map,
     Tusk,
     Tram,
@@ -31,7 +31,7 @@ impl Type {
         use self::Type::*;
         match self {
             Map | Tusk | Tram => false,
-            _ => true
+            _ => true,
         }
     }
 }
@@ -290,9 +290,8 @@ runes! {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Odor {
-    ud, // unsigned integer
-
-    // TODO: Fill out the rest.
+    // Unsigned integer.
+    ud, // TODO: The rest
 }
 
 /// Rust-native representation for Hoon's abstract syntax trees.
@@ -321,8 +320,9 @@ impl Twig {
 
         match self {
             // Constant.
-            &Twig::Cell(box Twig::Rune(Rune::dtzy), box Twig::Atom(_, ref atom)) =>
-                Ok(n![1, atom.clone()]),
+            &Twig::Cell(box Twig::Rune(Rune::dtzy), box Twig::Atom(_, ref atom)) => {
+                Ok(n![1, atom.clone()])
+            }
 
             // TODO
             _ => Err(CompileError::CompileError),
@@ -353,16 +353,16 @@ mod test {
                 // Nock the formula against an empty subject.
                 // Might want to allow passing a subject in evals interface.
                 let result = Noun::Cell(Rc::new(Noun::Atom(0)), Rc::new(formula))
-                    .nock()
-                    .ok()
-                    .expect("Eval failed");
+                                 .nock()
+                                 .ok()
+                                 .expect("Eval failed");
 
                 assert_eq!(format!("{}", result), output);
                 assert!(tail == &b""[..],
                         format!("Unparsed suffix left in input: '{}'",
                                 str::from_utf8(tail).unwrap()));
             }
-            Err(e) => panic!("Parsing failed after {}", str::from_utf8(e).unwrap())
+            Err(e) => panic!("Parsing failed after {}", str::from_utf8(e).unwrap()),
         }
     }
 
