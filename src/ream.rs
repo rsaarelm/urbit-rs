@@ -4,7 +4,7 @@ use std::str;
 use std::str::FromStr;
 use num::bigint::BigUint;
 
-use twig::{Twig, Rune, Odor};
+use twig::{self, Twig, Rune, Odor};
 
 pub type ParseResult<'a, T> = Result<(&'a [u8], T), &'a [u8]>;
 
@@ -28,7 +28,14 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
 
     if let Ok(x) = atom(input) { return Ok(x); }
-    if let Ok(x) = rune(input, tsgr, 2) { return Ok(x); }
+
+    // Just crunch through the whole set of rune data and look for all the
+    // ones that look like they can be parsed naively.
+    for i in twig::RUNES.iter() {
+        if i.rune.is_regular() && i.rune.glyph().is_some() {
+            if let Ok(x) = rune(input, i.rune) { return Ok(x); }
+        }
+    }
 
     Err(input)
 }
@@ -39,9 +46,11 @@ enum Form {
     Wide
 }
 
-fn rune<'a>(input: &'a[u8], rune: Rune, n: usize) -> ParseResult<'a, Twig> {
-    let (input, form) = try!(rune_start(input, rune.glyph()));
-    let (input, args) = try!(rune_args(input, form, n));
+fn rune<'a>(input: &'a[u8], rune: Rune) -> ParseResult<'a, Twig> {
+    assert!(rune.is_regular(), "Can't use standard parser on this type of rune!");
+    let glyph = rune.glyph().expect("Trying to parse an unprintable rune");
+    let (input, form) = try!(rune_start(input, &glyph));
+    let (input, args) = try!(rune_args(input, form, rune.arity()));
     Ok((input, Twig::Cell(box Twig::Rune(rune), box args)))
 }
 
