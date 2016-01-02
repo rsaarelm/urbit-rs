@@ -3,8 +3,6 @@
 extern crate bit_vec;
 extern crate num;
 #[macro_use]
-extern crate nom;
-#[macro_use]
 extern crate nock;
 
 use std::rc::Rc;

@@ -1,7 +1,6 @@
 #![allow(non_camel_case_types)]
 
 use num::bigint::BigUint;
-use nom::IResult;
 use nock::Noun;
 use ream::ream;
 
@@ -79,7 +78,7 @@ impl Twig {
 }
 
 pub fn make(input: &[u8]) -> Result<Noun, CompileError> {
-    if let IResult::Done(_, twig) = ream(input) {
+    if let Ok((_, twig)) = ream(input) {
         twig.ut()
     } else {
         Err(CompileError::ParseError)
@@ -91,12 +90,11 @@ pub fn make(input: &[u8]) -> Result<Noun, CompileError> {
 mod test {
     use std::str;
     use std::rc::Rc;
-    use nom::IResult;
     use nock::Noun;
     use ream::ream;
 
     fn evals(input: &str, output: &str) {
-        if let IResult::Done(tail, twig) = ream(input.as_bytes()) {
+        if let Ok((tail, twig)) = ream(input.as_bytes()) {
             let formula = twig.ut().ok().expect("Compile failed");
             // Nock the formula against an empty subject.
             // Might want to allow passing a subject in evals interface.
