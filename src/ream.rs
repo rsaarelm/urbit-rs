@@ -153,7 +153,7 @@ fn term(input: &[u8]) -> ParseResult<&[u8]> {
     for i in input.iter() {
         if idx == 0 && *i == '$' as u8 {
             // Special $
-            if input.len() > 1 && !is_ident_middle(input[1]) {
+            if input.len() > 1 && is_ident_middle(input[1]) {
                 // Can't have something like $foo.
                 return Err(input);
             }
