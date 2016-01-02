@@ -116,6 +116,7 @@ mod test {
     fn test_atom() {
         evals("0", "0");
         evals("123", "123");
+        evals("  123", "123");
     }
 
     #[test]
