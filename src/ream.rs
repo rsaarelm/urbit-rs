@@ -279,3 +279,20 @@ fn split_after(input: &[u8], c: u8) -> ParseResult<&[u8]> {
     }
     Ok((&input[idx..], &input[0..idx]))
 }
+
+#[cfg(test)]
+mod test {
+    use std::fmt;
+    use std::str;
+    use super::{ParseResult, ream};
+
+    fn parses<T: fmt::Debug>(ret: ParseResult<T>, expect: &str) {
+        assert_eq!(&format!("{:?}", ret.unwrap().1), expect);
+    }
+
+    #[test]
+    fn test_parse() {
+       parses(ream("123".as_bytes()), "Cell(Rune(dtzy), Atom(ud, BigUint { data: [123] }))");
+       parses(ream("=>($ 3)".as_bytes()), "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([\"$\"])), Cell(Rune(dtzy), Atom(ud, BigUint { data: [3] }))))");
+    }
+}
