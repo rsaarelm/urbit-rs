@@ -118,6 +118,7 @@ mod test {
         evals("0", "0");
         evals("123", "123");
         evals("  123", "123");
+        evals(" :: IGNORE ME\n  123", "123");
     }
 
     #[test]

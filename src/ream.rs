@@ -21,14 +21,13 @@ pub fn ream(mut input: &[u8]) -> ParseResult<Twig> {
             break;
         }
     }
-    // TODO
-    //Err(input)
-    atom(input)
+    twig(input)
 }
 
 fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
 
+    if let Ok(x) = atom(input) { return Ok(x); }
     if let Ok(x) = rune(input, tsgr, 2) { return Ok(x); }
 
     Err(input)
@@ -128,7 +127,7 @@ fn ud(input: &[u8]) -> ParseResult<BigUint> {
 fn space_or_comment(input: &[u8]) -> ParseResult<()> {
     let mut tail = input;
     loop {
-        if let Ok((t, _)) = comment(input) {
+        if let Ok((t, _)) = comment(tail) {
             tail = t
         } else {
             if tail.len() == 0 {
@@ -172,12 +171,10 @@ fn gap(input: &[u8]) -> ParseResult<&[u8]> {
     }
 }
 
-fn comment(input: &[u8]) -> ParseResult<()> {
-    if let Ok(_) = tag(input, "::") {
-        Ok((split_after(input, '\n' as u8).0, ()))
-    } else {
-        Err(input)
-    }
+fn comment(input: &[u8]) -> ParseResult<&[u8]> {
+    let (input, _) = try!(tag(input, "::"));
+    // XXX: The initial bit with the "::" won't make it to the return value.
+    split_after(input, '\n' as u8)
 }
 
 fn is_whitespace(c: u8) -> bool {
@@ -203,7 +200,7 @@ fn tag<'a>(input: &'a[u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
     Ok((&input[prefix.len()..], &input[0..prefix.len()]))
 }
 
-fn split_after(input: &[u8], c: u8) -> (&[u8], &[u8]) {
+fn split_after(input: &[u8], c: u8) -> ParseResult<&[u8]> {
     let mut idx = 1;
     for i in input.iter() {
         if *i == c {
@@ -211,6 +208,6 @@ fn split_after(input: &[u8], c: u8) -> (&[u8], &[u8]) {
         }
         idx += 1;
     }
-
-    (&input[idx..], &input[0..idx])
+    println!("Split at {}", idx);
+    Ok((&input[idx..], &input[0..idx]))
 }
