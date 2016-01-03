@@ -25,17 +25,6 @@ pub enum Type {
     Tram,
 }
 
-impl Type {
-    /// Return whether this type can be matched with a regular twig parser.
-    pub fn is_regular(self) -> bool {
-        use self::Type::*;
-        match self {
-            Map | Tusk | Tram => false,
-            _ => true,
-        }
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct RuneData {
     pub rune: Rune,
@@ -118,15 +107,6 @@ macro_rules! runes {
                 }
             }
 
-            /// Return the number of arguments this rune takes
-            pub fn arity(self) -> usize {
-                if RUNES[self as usize].arg.s.is_some() { return 4; }
-                if RUNES[self as usize].arg.r.is_some() { return 3; }
-                if RUNES[self as usize].arg.q.is_some() { return 2; }
-                if RUNES[self as usize].arg.p.is_some() { return 1; }
-                return 0;
-            }
-
             pub fn arg(self, i: usize) -> Option<Type> {
                 match i {
                     0 => RUNES[self as usize].arg.p,
@@ -135,15 +115,6 @@ macro_rules! runes {
                     3 => RUNES[self as usize].arg.s,
                     _ => None
                 }
-            }
-
-            /// Return whether this rune can have a regular parser.
-            pub fn is_regular(self) -> bool {
-                if RUNES[self as usize].arg.p.map_or(false, |x| !x.is_regular()) { return false; }
-                if RUNES[self as usize].arg.q.map_or(false, |x| !x.is_regular()) { return false; }
-                if RUNES[self as usize].arg.r.map_or(false, |x| !x.is_regular()) { return false; }
-                if RUNES[self as usize].arg.s.map_or(false, |x| !x.is_regular()) { return false; }
-                return true;
             }
         }
     }
@@ -372,15 +343,10 @@ mod test {
     #[test]
     fn test_rune() {
         use super::Rune::*;
+        use super::Type;
 
-        assert_eq!(tsgr.arity(), 2);
+        assert_eq!(tsgr.arg(1), Some(Type::Twig));
         assert_eq!(&tsgr.glyph().unwrap(), "=>");
-
-        assert!(tsgr.is_regular());
-        assert!(wtcl.is_regular());
-        assert!(zpzp.is_regular());
-        assert!(!cntr.is_regular());
-        assert!(!cltr.is_regular());
     }
 
     #[test]

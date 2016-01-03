@@ -6,7 +6,7 @@ use num::bigint::BigUint;
 use num::traits::Zero;
 use nock::Noun;
 
-use twig::{self, Twig, Rune, Odor};
+use twig::{self, Twig, Rune, Odor, Type};
 
 pub type ParseResult<'a, T> = Result<(&'a [u8], T), &'a [u8]>;
 
@@ -32,7 +32,7 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
     // Just crunch through the whole set of rune data and look for all the
     // ones that look like they can be parsed naively.
     for i in twig::RUNES.iter() {
-        if i.rune.is_regular() && i.rune.glyph().is_some() {
+        if i.rune.glyph().is_some() {
             if let Ok(x) = rune(input, i.rune) {
                 return Ok(x);
             }
@@ -56,12 +56,16 @@ enum Form {
 }
 
 fn rune<'a>(input: &'a [u8], rune: Rune) -> ParseResult<'a, Twig> {
-    assert!(rune.is_regular(),
-            "Can't use standard parser on this type of rune!");
     let glyph = rune.glyph().expect("Trying to parse an unprintable rune");
-    let (input, form) = try!(rune_start(input, &glyph));
-    let (input, args) = try!(rune_args(input, form, rune.arity()));
-    Ok((input, Twig::Cell(box Twig::Rune(rune), box args)))
+    if rune.arg(0).is_some() {
+        let (input, form) = try!(rune_start(input, &glyph));
+        let (input, args) = try!(rune_args(input, form, rune, 0));
+        Ok((input, Twig::Cell(box Twig::Rune(rune), box args)))
+    } else {
+        // Zero argument runes are just the glyph.
+        let (input, _) = try!(word(input, &glyph));
+        Ok((input, Twig::Cell(box Twig::Rune(rune), box Twig::Atom(Odor::ud, Zero::zero()))))
+    }
 }
 
 /// Parse the start of a rune with the given glyph and determine if the rune
@@ -81,17 +85,34 @@ fn rune_start<'a>(input: &'a [u8], glyph: &str) -> ParseResult<'a, Form> {
     Err(input)
 }
 
-fn rune_args(input: &[u8], form: Form, n: usize) -> ParseResult<Twig> {
-    assert!(n > 0);
-    if n == 1 {
-        let (input, p) = try!(twig(input));
-        let (input, _) = try!(rune_end(input, form));
-        Ok((input, p))
-    } else {
+fn rune_args(input: &[u8], form: Form, rune: Rune, arg_n: usize) -> ParseResult<Twig> {
+    assert!(rune.arg(arg_n).is_some());
+
+    if rune.arg(arg_n + 1).is_some() {
+        // This is not the last argument to the rune.
+        assert!(rune.arg(arg_n) != Some(Type::Tusk), "variadic rune argument (tusk) isn't last");
+        assert!(rune.arg(arg_n) != Some(Type::Tram), "variadic rune argument (tram) isn't last");
+        assert!(rune.arg(arg_n) != Some(Type::Map), "variadic rune argument (map) isn't last");
+
+        // XXX Could use different parsers here for different arg types, not
+        // just twig.
         let (input, p) = try!(twig(input));
         let (input, _) = try!(rune_sep(input, form));
-        let (input, ps) = try!(rune_args(input, form, n - 1));
+        let (input, ps) = try!(rune_args(input, form, rune, arg_n + 1));
         Ok((input, Twig::Cell(box p, box ps)))
+    } else {
+        match rune.arg(arg_n).unwrap() {
+            Type::Tusk => { unimplemented!() }
+            Type::Map => { unimplemented!() }
+            Type::Tram => {
+                tram(input, form)
+            }
+            _ => {
+                let (input, p) = try!(twig(input));
+                let (input, _) = try!(rune_end(input, form));
+                Ok((input, p))
+            }
+        }
     }
 }
 
@@ -429,6 +450,7 @@ mod test {
 
         parses(ream(".=(a .+(b))".as_bytes()), "Cell(Rune(dtts), Cell(Cell(Rune(cnzz), Wing([Atom(97)])), Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)])))))");
 
-        parses(ream("%=($ b .+(b))".as_bytes()), "");
+        parses(ream("%=($ b .+(b))".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Tram([([Atom(98)], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)]))))])))");
+        parses(ream("%=  $\nb  .+(b)\n==".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Tram([([Atom(98)], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)]))))])))");
     }
 }
