@@ -127,14 +127,14 @@ macro_rules! runes {
                 return 0;
             }
 
-            /// Return a vector of the types the rune takes.
-            pub fn args(self) -> Vec<Type> {
-                let mut ret = Vec::new();
-                if let Some(a) = RUNES[self as usize].arg.p { ret.push(a); } else { return ret; }
-                if let Some(a) = RUNES[self as usize].arg.q { ret.push(a); } else { return ret; }
-                if let Some(a) = RUNES[self as usize].arg.r { ret.push(a); } else { return ret; }
-                if let Some(a) = RUNES[self as usize].arg.s { ret.push(a); }
-                return ret;
+            pub fn arg(self, i: usize) -> Option<Type> {
+                match i {
+                    0 => RUNES[self as usize].arg.p,
+                    1 => RUNES[self as usize].arg.q,
+                    2 => RUNES[self as usize].arg.r,
+                    3 => RUNES[self as usize].arg.s,
+                    _ => None
+                }
             }
 
             /// Return whether this rune can have a regular parser.
@@ -305,6 +305,7 @@ pub enum Twig {
     // Wing parts are usually term names, but '.' is a raw Nock [0 1]. Treat
     // them all as nock, assume atoms are terms and cells are formulas.
     Wing(Vec<Noun>),
+    Tram(Vec<(Vec<Noun>, Twig)>),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

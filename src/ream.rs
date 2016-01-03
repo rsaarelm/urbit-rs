@@ -142,11 +142,81 @@ fn ud(input: &[u8]) -> ParseResult<BigUint> {
     Ok((&input[idx..], FromStr::from_str(&num).unwrap()))
 }
 
-fn wing(input: &[u8]) -> ParseResult<Twig> {
+fn tram(input: &[u8], form: Form) -> ParseResult<Twig> {
+    let (input, items) = try!(parse_tram(input, form));
+    assert!(items.len() > 0);
+
+    Ok((input, Twig::Tram(items)))
+}
+
+fn parse_tram(mut input: &[u8], form: Form) -> ParseResult<Vec<(Vec<Noun>, Twig)>> {
     let mut items = Vec::new();
-    let mut tail = input;
+
     loop {
-        if let Ok((t, term)) = term(tail) {
+        let (tail, p1) = try!(parse_wing(input));
+        let (tail, _) = try!(rune_sep(tail, form));
+        let (tail, p2) = try!(twig(tail));
+
+        items.push((p1, p2));
+
+        if let Ok((tail, _)) = varargs_end(tail, form) {
+            input = tail;
+            break;
+        } else if let Ok((tail, _)) = tram_sep(tail, form) {
+            input = tail;
+            continue;
+        }
+
+        return Err(tail);
+    }
+    if items.len() == 0 {
+        Err(input)
+    } else {
+        Ok((input, items))
+    }
+}
+
+fn tram_sep(input: &[u8], form: Form) -> ParseResult<&[u8]> {
+    match form {
+        Form::Tall => gap(input),
+        Form::Wide => tag(input, ", "),
+    }
+}
+
+// Terminates trams and tusks
+fn varargs_end(input: &[u8], form: Form) -> ParseResult<&[u8]> {
+    match form {
+        Form::Tall => {
+            let (input, _) = try!(gap(input));
+            word(input, "==")
+        }
+        Form::Wide => word(input, ")")
+    }
+}
+
+fn wing(input: &[u8]) -> ParseResult<Twig> {
+    let (input, items) = try!(parse_wing(input));
+    assert!(items.len() > 0);
+    if items[0] == n![0, 1] {
+        // Wings that start with dot produce a different twig, based on
+        // experimenting with the real ream. Don't understand the full logic
+        // of this yet.
+        Ok((input,
+            Twig::Cell(box Twig::Rune(Rune::cnts),
+                       box Twig::Cell(box Twig::Wing(items),
+                                      // Empty tram. XXX: Maybe we get a better twig type for trams?
+                                      // Should use that here then.
+                                      box Twig::Atom(Odor::ud, Zero::zero())))))
+    } else {
+        Ok((input,
+            Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(items))))
+    }
+}
+
+fn parse_wing(mut input: &[u8]) -> ParseResult<Vec<Noun>> {
+    let mut items = Vec::new();
+    loop {
+        if let Ok((tail, term)) = term(input) {
             let item = match str::from_utf8(term).unwrap() {
                 // Dot is "subject", all of the preceding context. Instead of
                 // an atom, we will insert the Nock formula for getting the
@@ -159,11 +229,13 @@ fn wing(input: &[u8]) -> ParseResult<Twig> {
                 _ => Noun::from_bytes(term),
             };
             items.push(item);
-            tail = t;
+            input = tail;
+        } else {
+            return Err(input);
         }
-        match wing_dot(tail) {
-            Ok((t, _)) => {
-                tail = t;
+        match wing_dot(input) {
+            Ok((tail, _)) => {
+                input = tail;
             }
             Err(_) => {
                 if items.len() == 0 {
@@ -174,21 +246,7 @@ fn wing(input: &[u8]) -> ParseResult<Twig> {
             }
         }
     }
-    assert!(items.len() > 0);
-    if items[0] == n![0, 1] {
-        // Wings that start with dot produce a different twig, based on
-        // experimenting with the real ream. Don't understand the full logic
-        // of this yet.
-        Ok((tail,
-            Twig::Cell(box Twig::Rune(Rune::cnts),
-                       box Twig::Cell(box Twig::Wing(items),
-                                      // Empty tram. XXX: Maybe we get a better twig type for trams?
-                                      // Should use that here then.
-                                      box Twig::Atom(Odor::ud, Zero::zero())))))
-    } else {
-        Ok((tail,
-            Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(items))))
-    }
+    Ok((input, items))
 }
 
 fn term(input: &[u8]) -> ParseResult<&[u8]> {
@@ -352,7 +410,6 @@ fn split_after(input: &[u8], c: u8) -> ParseResult<&[u8]> {
 #[cfg(test)]
 mod test {
     use std::fmt;
-    use std::str;
     use super::{ParseResult, ream};
 
     fn parses<T: fmt::Debug>(ret: ParseResult<T>, expect: &str) {
@@ -371,5 +428,7 @@ mod test {
                 Atom(ud, BigUint { data: [3] }))))");
 
         parses(ream(".=(a .+(b))".as_bytes()), "Cell(Rune(dtts), Cell(Cell(Rune(cnzz), Wing([Atom(97)])), Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)])))))");
+
+        parses(ream("%=($ b .+(b))".as_bytes()), "");
     }
 }
