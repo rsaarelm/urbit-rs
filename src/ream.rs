@@ -3,6 +3,8 @@
 use std::str;
 use std::str::FromStr;
 use num::bigint::BigUint;
+use num::traits::Zero;
+use nock::Noun;
 
 use twig::{self, Twig, Rune, Odor};
 
@@ -141,26 +143,64 @@ fn ud(input: &[u8]) -> ParseResult<BigUint> {
 }
 
 fn wing(input: &[u8]) -> ParseResult<Twig> {
-    // TODO: Dotted forms expanding to multi-term wings.
-    let (input, term) = try!(term(input));
-    let s = str::from_utf8(term).unwrap().to_string();
-    Ok((input,
-        Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(vec![s]))))
+    let mut items = Vec::new();
+    let mut tail = input;
+    loop {
+        if let Ok((t, term)) = term(tail) {
+            let item = match str::from_utf8(term).unwrap() {
+                // Dot is "subject", all of the preceding context. Instead of
+                // an atom, we will insert the Nock formula for getting the
+                // entire subject.
+                "." => n![0, 1],
+                // Buc is the default recursion symbol. Evaluates to atom
+                // zero.
+                "$" => Noun::Atom(0),
+                // The regular terms are replaced with cord atoms.
+                _ => Noun::from_bytes(term),
+            };
+            items.push(item);
+            tail = t;
+        }
+        match wing_dot(tail) {
+            Ok((t, _)) => {
+                tail = t;
+            }
+            Err(_) => {
+                if items.len() == 0 {
+                    return Err(input);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    assert!(items.len() > 0);
+    if items[0] == n![0, 1] {
+        // Wings that start with dot produce a different twig, based on
+        // experimenting with the real ream. Don't understand the full logic
+        // of this yet.
+        Ok((tail,
+            Twig::Cell(box Twig::Rune(Rune::cnts),
+                       box Twig::Cell(box Twig::Wing(items),
+                                      // Empty tram. XXX: Maybe we get a better twig type for trams?
+                                      // Should use that here then.
+                                      box Twig::Atom(Odor::ud, Zero::zero())))))
+    } else {
+        Ok((tail,
+            Twig::Cell(box Twig::Rune(Rune::cnzz), box Twig::Wing(items))))
+    }
 }
 
 fn term(input: &[u8]) -> ParseResult<&[u8]> {
+    // Special terms.
+    for special in ["$", "."].into_iter() {
+        if let Ok(x) = word(input, special) {
+            return Ok(x);
+        }
+    }
+
     let mut idx = 0;
     for i in input.iter() {
-        if idx == 0 && *i == '$' as u8 {
-            // Special $
-            if input.len() > 1 && is_ident_middle(input[1]) {
-                // Can't have something like $foo.
-                return Err(input);
-            }
-            idx += 1;
-            break;
-        }
-
         if idx == 0 && !is_ident_start(*i) {
             break;
         }
@@ -176,6 +216,18 @@ fn term(input: &[u8]) -> ParseResult<&[u8]> {
         Err(input)
     } else {
         Ok((&input[idx..], &input[..idx]))
+    }
+}
+
+fn wing_dot(input: &[u8]) -> ParseResult<()> {
+    if input.len() < 2 {
+        return Err(input);
+    }
+    let (tail, _) = try!(tag(input, "."));
+    if !is_ident_start(tail[0]) && tail[0] != '.' as u8 {
+        Err(input)
+    } else {
+        Ok((tail, ()))
     }
 }
 
@@ -267,6 +319,23 @@ fn tag<'a>(input: &'a [u8], prefix: &str) -> ParseResult<'a, &'a [u8]> {
     }
 
     Ok((&input[prefix.len()..], &input[0..prefix.len()]))
+}
+
+/// Parse a full word.
+fn word<'a>(input: &'a [u8], s: &str) -> ParseResult<'a, &'a [u8]> {
+    let ret = try!(tag(input, s));
+    try!(word_break(input));
+    Ok(ret)
+}
+
+fn word_break(input: &[u8]) -> ParseResult<()> {
+    if input.len() == 0 {
+        return Ok((input, ()));
+    }
+    if is_ident_middle(input[0]) {
+        return Err(input);
+    }
+    Ok((input, ()))
 }
 
 fn split_after(input: &[u8], c: u8) -> ParseResult<&[u8]> {

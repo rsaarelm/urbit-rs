@@ -302,7 +302,9 @@ pub enum Twig {
     Cell(Box<Twig>, Box<Twig>),
     Rune(Rune),
     Atom(Odor, BigUint),
-    Wing(Vec<String>),
+    // Wing parts are usually term names, but '.' is a raw Nock [0 1]. Treat
+    // them all as nock, assume atoms are terms and cells are formulas.
+    Wing(Vec<Noun>),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
