@@ -291,11 +291,31 @@ pub enum CompileError {
 impl Twig {
     /// Compile a twig into a Nock formula.
     pub fn ut(&self) -> Result<Noun, CompileError> {
-
         match self {
             // Constant.
             &Twig::Cell(box Twig::Rune(Rune::dtzy), box Twig::Atom(_, ref atom)) => {
                 Ok(n![1, atom.clone()])
+            }
+
+            // Increment
+            &Twig::Cell(box Twig::Rune(Rune::dtls), ref p) => {
+                let t = try!(p.ut());
+                Ok(n![4, t])
+            }
+
+            // Equality.
+            &Twig::Cell(box Twig::Rune(Rune::dtts), box Twig::Cell(ref p, ref q)) => {
+                let t1 = try!(p.ut());
+                let t2 = try!(q.ut());
+                Ok(n![5, t1, t2])
+            }
+
+            // If-else
+            &Twig::Cell(box Twig::Rune(Rune::wtcl), box Twig::Cell(ref p, box Twig::Cell(ref q, ref r))) => {
+                let t1 = try!(p.ut());
+                let t2 = try!(q.ut());
+                let t3 = try!(r.ut());
+                Ok(n![6, t1, t2, t3])
             }
 
             // TODO
@@ -355,6 +375,23 @@ mod test {
         evals("123", "123");
         evals("  123", "123");
         evals(" :: IGNORE ME\n  123", "123");
+    }
+
+    #[test]
+    fn test_simple_ops() {
+        evals(".=(4 4)", "0");
+        evals(".=\n4\n4", "0");
+        evals(".=(4 5)", "1");
+        evals(".+(5)", "6");
+    }
+
+    #[test]
+    fn test_conditional() {
+        evals("?:(0 1 2)", "1");
+        evals("?:(1 1 2)", "2");
+
+        evals("?:(.=(4 4) 1 2)", "1");
+        evals("?:(.=(8 4) 1 2)", "2");
     }
 
     #[test]
