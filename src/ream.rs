@@ -29,13 +29,6 @@ pub fn ream(mut input: &[u8]) -> ParseResult<Twig> {
 fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
 
-    if let Ok(x) = atom(input) {
-        return Ok(x);
-    }
-    if let Ok(x) = wing(input) {
-        return Ok(x);
-    }
-
     // Just crunch through the whole set of rune data and look for all the
     // ones that look like they can be parsed naively.
     for i in twig::RUNES.iter() {
@@ -44,6 +37,13 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
                 return Ok(x);
             }
         }
+    }
+
+    if let Ok(x) = atom(input) {
+        return Ok(x);
+    }
+    if let Ok(x) = wing(input) {
+        return Ok(x);
     }
 
     Err(input)
@@ -361,7 +361,15 @@ mod test {
 
     #[test]
     fn test_parse() {
-       parses(ream("123".as_bytes()), "Cell(Rune(dtzy), Atom(ud, BigUint { data: [123] }))");
-       parses(ream("=>($ 3)".as_bytes()), "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([\"$\"])), Cell(Rune(dtzy), Atom(ud, BigUint { data: [3] }))))");
+        parses(ream("123".as_bytes()),
+               "Cell(Rune(dtzy), Atom(ud, BigUint { data: [123] }))");
+        parses(ream("=>($ 3)".as_bytes()),
+               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Cell(Rune(dtzy), \
+                Atom(ud, BigUint { data: [3] }))))");
+        parses(ream("=>\n$  3".as_bytes()),
+               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Cell(Rune(dtzy), \
+                Atom(ud, BigUint { data: [3] }))))");
+
+        parses(ream(".=(a .+(b))".as_bytes()), "Cell(Rune(dtts), Cell(Cell(Rune(cnzz), Wing([Atom(97)])), Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)])))))");
     }
 }
