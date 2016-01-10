@@ -442,15 +442,15 @@ mod test {
         parses(ream("123".as_bytes()),
                "Cell(Rune(dtzy), Atom(ud, BigUint { data: [123] }))");
         parses(ream("=>($ 3)".as_bytes()),
-               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Cell(Rune(dtzy), \
+               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([0])), Cell(Rune(dtzy), \
                 Atom(ud, BigUint { data: [3] }))))");
         parses(ream("=>\n$  3".as_bytes()),
-               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Cell(Rune(dtzy), \
+               "Cell(Rune(tsgr), Cell(Cell(Rune(cnzz), Wing([0])), Cell(Rune(dtzy), \
                 Atom(ud, BigUint { data: [3] }))))");
 
-        parses(ream(".=(a .+(b))".as_bytes()), "Cell(Rune(dtts), Cell(Cell(Rune(cnzz), Wing([Atom(97)])), Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)])))))");
+        parses(ream(".=(a .+(b))".as_bytes()), "Cell(Rune(dtts), Cell(Cell(Rune(cnzz), Wing([97])), Cell(Rune(dtls), Cell(Rune(cnzz), Wing([98])))))");
 
-        parses(ream("%=($ b .+(b))".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Tram([([Atom(98)], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)]))))])))");
-        parses(ream("%=  $\nb  .+(b)\n==".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([Atom(0)])), Tram([([Atom(98)], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([Atom(98)]))))])))");
+        parses(ream("%=($ b .+(b))".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([0])), Tram([([98], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([98]))))])))");
+        parses(ream("%=  $\nb  .+(b)\n==".as_bytes()), "Cell(Rune(cnts), Cell(Cell(Rune(cnzz), Wing([0])), Tram([([98], Cell(Rune(dtls), Cell(Rune(cnzz), Wing([98]))))])))");
     }
 }
