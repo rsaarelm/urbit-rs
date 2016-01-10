@@ -337,7 +337,7 @@ pub fn make(input: &[u8]) -> Result<Noun, CompileError> {
 mod test {
     use std::str;
     use std::rc::Rc;
-    use nock::Noun;
+    use nock::{Noun, nock_on};
     use ream::ream;
 
     fn evals(input: &str, output: &str) {
@@ -346,8 +346,7 @@ mod test {
                 let formula = twig.ut().ok().expect("Compile failed");
                 // Nock the formula against an empty subject.
                 // Might want to allow passing a subject in evals interface.
-                let result = Noun::Cell(Rc::new(Noun::Atom(0)), Rc::new(formula))
-                                 .nock()
+                let result = nock_on(&Noun::Atom(0), &formula)
                                  .ok()
                                  .expect("Eval failed");
 

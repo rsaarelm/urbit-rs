@@ -7,7 +7,7 @@ repository = "https://github.com/rsaarelm/urbit-rs"
 license = "MIT"
 
 [dependencies]
-nock = { git = "https://github.com/rsaarelm/nock-rs" }
+nock = "0.2"
 num = "*"
 bit-vec = "*"
 

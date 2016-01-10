@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::io::prelude::*;
 use std::fs::File;
 use nock::Noun::*;
+use nock::nock_on;
 
 fn main() {
     let mut file = File::open(env::args().nth(1).expect("Usage scan [urbit.pill]")).unwrap();
@@ -14,9 +15,8 @@ fn main() {
     file.read_to_end(&mut buf).unwrap();
     println!("Unpacking pill");
     let noun = urbit::unpack_pill(buf).unwrap();
-    let noun = Cell(Rc::new(Atom(0)), Rc::new(noun));
 
     println!("Nocking pill");
-    let noun = noun.nock().unwrap();
+    let noun = nock_on(&Atom(0), &noun).unwrap();
     println!("Result: {}", noun);
 }
