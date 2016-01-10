@@ -322,6 +322,10 @@ impl Twig {
             _ => Err(CompileError::CompileError),
         }
     }
+
+    pub fn to_noun(&self) -> Noun {
+        unimplemented!();
+    }
 }
 
 pub fn make(input: &[u8]) -> Result<Noun, CompileError> {
