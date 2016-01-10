@@ -8,8 +8,8 @@ license = "MIT"
 
 [dependencies]
 nock = "0.2"
-num = "*"
-bit-vec = "*"
+num = "0.1"
+bit-vec = "0.4"
 
 [[example]]
 name = "urbit"
