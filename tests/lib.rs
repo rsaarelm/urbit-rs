@@ -2,20 +2,15 @@ extern crate urbit;
 
 use urbit::{ream, unpack_pill};
 
+const HOON_SRC: &'static str = include_str!("assets/hoon.hoon");
+const HOON_TWIG: &'static [u8] = include_bytes!("assets/hoontwig.pill");
+
 #[test]
-#[ignore] // FIXME
+#[ignore] // TODO
 fn test_parse_hoon_hoon() {
-    use std::fs::File;
-    use std::io::prelude::*;
+    let twig = unpack_pill(HOON_TWIG.to_vec()).unwrap();
 
-    let mut hoon_src = Vec::new();
-    File::open("assets/hoon.hoon").unwrap().read_to_end(&mut hoon_src).unwrap();
-
-    let mut twig_pill = Vec::new();
-    File::open("assets/hoontwig.pill").unwrap().read_to_end(&mut twig_pill).unwrap();
-    let twig = unpack_pill(twig_pill).unwrap();
-
-    let parse = ream(&hoon_src);
+    let parse = ream(HOON_SRC.as_bytes());
     assert!(parse.is_ok(), "Failed to parse hoon.hoon");
 
     let parse_noun = parse.unwrap().1.to_noun();
