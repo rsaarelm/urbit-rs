@@ -3,7 +3,7 @@
 use std::str;
 use num::bigint::BigUint;
 use nock::Noun;
-use ream::ream;
+use parse::ream;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Type {
@@ -338,7 +338,7 @@ mod test {
     use std::str;
     use std::rc::Rc;
     use nock::{Noun, nock_on};
-    use ream::ream;
+    use parse::ream;
 
     fn evals(input: &str, output: &str) {
         match ream(input.as_bytes()) {

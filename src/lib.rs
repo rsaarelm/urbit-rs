@@ -12,11 +12,11 @@ use num::bigint::BigUint;
 use num::traits::{One, ToPrimitive};
 use nock::Noun;
 
-pub use ream::ream;
+pub use parse::ream;
 pub use twig::Twig;
 
 mod twig;
-mod ream;
+mod parse;
 
 /// Unpack the data of an Urbit pillfile into a Nock noun.
 pub fn unpack_pill(mut buf: Vec<u8>) -> Result<Noun, &'static str> {
