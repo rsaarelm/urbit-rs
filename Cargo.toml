@@ -4,7 +4,7 @@ version = "0.0.0"
 authors = ["Risto Saarelma <risto.saarelma@iki.fi>"]
 description = "Urbit utilities"
 repository = "https://github.com/rsaarelm/urbit-rs"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 nock = "0.2"
