@@ -1,12 +1,15 @@
-#![feature(box_syntax, box_patterns)]
+#![feature(box_syntax, box_patterns, hashmap_hasher)]
 
 extern crate bit_vec;
 extern crate num;
+extern crate fnv;
 #[macro_use]
 extern crate nock;
 
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::collections::hash_state::DefaultState;
+use fnv::FnvHasher;
 use bit_vec::BitVec;
 use num::bigint::BigUint;
 use num::traits::{One, ToPrimitive};
@@ -82,12 +85,12 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
 ///
 /// Return the Nock noun.
 fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
-    let (_, noun) = try!(parse(0, bits, &mut HashMap::new()));
+    let (_, noun) = try!(parse(0, bits, &mut Default::default()));
     return Ok((*noun.clone()).clone());
 
     fn parse(mut pos: usize,
              bits: &BitVec,
-             dict: &mut HashMap<usize, Rc<Noun>>)
+             dict: &mut HashMap<usize, Rc<Noun>, DefaultState<FnvHasher>>)
              -> Result<(usize, Rc<Noun>), &'static str> {
         let key = pos;
         if bits[pos] {

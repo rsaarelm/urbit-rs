@@ -8,6 +8,8 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 nock = "0.2"
+fnv = "1.0"
+time = "0.1"
 num = "0.1"
 bit-vec = "0.4"
 
