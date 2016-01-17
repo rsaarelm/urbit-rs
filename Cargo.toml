@@ -12,7 +12,3 @@ fnv = "1.0"
 time = "0.1"
 num = "0.1"
 bit-vec = "0.4"
-
-[[example]]
-name = "urbit"
-path = "examples/urbit.rs"
