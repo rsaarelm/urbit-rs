@@ -26,15 +26,31 @@ pub fn ream(mut input: &[u8]) -> ParseResult<Twig> {
     twig(input)
 }
 
+fn shorter<'a: 'c, 'b: 'c, 'c>(a: Option<&'a[u8]>, b: &'b[u8]) -> &'c[u8] {
+    if let Some(a) = a {
+        if a.len() < b.len() {
+            a
+        } else {
+            b
+        }
+    } else {
+        b
+    }
+}
+
 fn twig(input: &[u8]) -> ParseResult<Twig> {
     use twig::Rune::*;
+
+    // Track the most precise error from rune parsers.
+    let mut err = None;
 
     // Just crunch through the whole set of rune data and look for all the
     // ones that look like they can be parsed naively.
     for i in twig::RUNES.iter() {
         if i.rune.glyph().is_some() {
-            if let Ok(x) = rune(input, i.rune) {
-                return Ok(x);
+            match rune(input, i.rune) {
+                Err(e) => err = Some(shorter(err, e)),
+                ok => return ok,
             }
         }
     }
@@ -46,7 +62,11 @@ fn twig(input: &[u8]) -> ParseResult<Twig> {
         return Ok(x);
     }
 
-    Err(input)
+    if let Some(err) = err {
+        Err(err)
+    } else {
+        Err(input)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

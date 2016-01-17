@@ -17,7 +17,10 @@ fn test_parse_hoon_hoon() {
 
     let parse = ream(HOON_SRC.as_bytes());
     if let Err(tail) = parse {
-        println!("Parse error on line {}", lines(HOON_SRC) - lines(str::from_utf8(tail).unwrap()) + 1);
+        let err_txt = str::from_utf8(tail).unwrap();
+        println!("Parse error on line {}, starting from '{}'",
+                 lines(HOON_SRC) - lines(err_txt) + 1,
+                 err_txt.chars().take_while(|&x| x != '\n').collect::<String>());
         assert!(false);
     }
     assert!(parse.is_ok(), "Failed to parse hoon.hoon");
