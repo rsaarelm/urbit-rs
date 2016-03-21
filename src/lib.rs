@@ -1,15 +1,10 @@
-#![feature(box_syntax, box_patterns, hashmap_hasher)]
-
 extern crate bit_vec;
 extern crate num;
 extern crate fnv;
 #[macro_use]
 extern crate nock;
 
-use std::rc::Rc;
 use std::collections::HashMap;
-use std::collections::hash_state::DefaultState;
-use fnv::FnvHasher;
 use bit_vec::BitVec;
 use num::bigint::BigUint;
 use num::traits::{One, ToPrimitive};
@@ -80,12 +75,12 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
 /// Return the Nock noun.
 fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
     let (_, noun) = try!(parse(0, bits, &mut Default::default()));
-    return Ok((*noun.clone()).clone());
+    return Ok(noun);
 
     fn parse(mut pos: usize,
              bits: &BitVec,
-             dict: &mut HashMap<usize, Rc<Noun>, DefaultState<FnvHasher>>)
-             -> Result<(usize, Rc<Noun>), &'static str> {
+             dict: &mut HashMap<usize, Noun>)
+             -> Result<(usize, Noun), &'static str> {
         let key = pos;
         if bits[pos] {
             pos += 1;
@@ -97,7 +92,7 @@ fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
                 let (p, right) = try!(parse(pos, bits, dict));
                 pos = p;
 
-                let ret = Rc::new(Noun::Cell(left, right));
+                let ret = Noun::cell(left, right);
                 dict.insert(key, ret.clone());
                 Ok((pos, ret))
             } else {
@@ -117,7 +112,7 @@ fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
             // Atom.
             let (p, q) = rub(&bits, pos);
             pos += p;
-            let ret = Rc::new(Noun::from_biguint(q));
+            let ret = Noun::from(q);
             dict.insert(key, ret.clone());
             Ok((pos, ret))
         }
