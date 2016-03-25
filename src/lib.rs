@@ -8,7 +8,301 @@ use std::collections::HashMap;
 use bit_vec::BitVec;
 use num::bigint::BigUint;
 use num::traits::{One, ToPrimitive};
-use nock::Noun;
+use nock::{Noun, NockResult, NockError, Shape, FromNoun};
+use nock::{DigitSlice, FromDigits};
+
+mod jet;
+
+/// An Urbit virtual machine.
+pub struct VM {
+    jets: HashMap<Noun, fn(&Noun) -> Noun>,
+}
+
+impl VM {
+    pub fn new() -> VM {
+        VM {
+            jets: HashMap::new(),
+        }
+    }
+
+    pub fn nock_on(&mut self, mut subject: Noun, mut formula: Noun) -> NockResult {
+        // XXX: Copy-pasted a bunch from the reference implementation at
+        // nock-rs. The nock_on machinery needs to be reasonably monolithical
+        // because we're doing the looping manual tail call elimination.
+        loop {
+            if let Shape::Cell(ops, tail) = formula.clone().get() {
+                match ops.as_u32() {
+                    // Axis
+                    Some(0) => return nock::get_axis(&tail, &subject),
+
+                    // Just
+                    Some(1) => return Ok(tail.clone()),
+
+                    // Fire
+                    Some(2) => {
+                        match tail.get() {
+                            Shape::Cell(ref b, ref c) => {
+                                let p = try!(self.nock_on(subject.clone(),
+                                                     (*b).clone()));
+                                let q = try!(self.nock_on(subject, (*c).clone()));
+                                subject = p;
+                                formula = q;
+                                continue;
+                            }
+                            _ => return Err(NockError),
+                        }
+                    }
+
+                    // Depth
+                    Some(3) => {
+                        let p = try!(self.nock_on(subject.clone(), (*tail).clone()));
+                        return match p.get() {
+                            Shape::Cell(_, _) => Ok(Noun::from(0u32)),
+                            _ => Ok(Noun::from(1u32)),
+                        };
+                    }
+
+                    // Bump
+                    Some(4) => {
+                        let p = try!(self.nock_on(subject.clone(), (*tail).clone()));
+                        return match p.get() {
+                            Shape::Atom(ref x) => {
+                                // TODO: Non-bignum optimization
+                                Ok(Noun::from(BigUint::from_digits(x).unwrap() +
+                                              BigUint::one()))
+                            }
+                            _ => Err(NockError),
+                        };
+                    }
+
+                    // Same
+                    Some(5) => {
+                        let p = try!(self.nock_on(subject.clone(), (*tail).clone()));
+                        return match p.get() {
+                            Shape::Cell(ref a, ref b) => {
+                                if a == b {
+                                    // Yes.
+                                    return Ok(Noun::from(0u32));
+                                } else {
+                                    // No.
+                                    return Ok(Noun::from(1u32));
+                                }
+                            }
+                            _ => return Err(NockError),
+                        };
+                    }
+
+                    // If
+                    Some(6) => {
+                        if let Some((b, c, d)) = tail.get_122() {
+                            let p = try!(self.nock_on(subject.clone(), (*b).clone()));
+                            match p.get() {
+                                Shape::Atom(ref x) => {
+                                    if x == &0u32.as_digits() {
+                                        formula = (*c).clone();
+                                    } else if x == &1u32.as_digits() {
+                                        formula = (*d).clone();
+                                    } else {
+                                        return Err(NockError);
+                                    }
+                                }
+                                _ => return Err(NockError),
+                            }
+                            continue;
+                        } else {
+                            return Err(NockError);
+                        }
+                    }
+
+                    // Compose
+                    Some(7) => {
+                        match tail.get() {
+                            Shape::Cell(ref b, ref c) => {
+                                let p = try!(self.nock_on(subject.clone(),
+                                                     (*b).clone()));
+                                subject = p;
+                                formula = (*c).clone();
+                                continue;
+                            }
+                            _ => return Err(NockError),
+                        }
+                    }
+
+                    // Push
+                    Some(8) => {
+                        match tail.get() {
+                            Shape::Cell(ref b, ref c) => {
+                                let p = try!(self.nock_on(subject.clone(),
+                                                     (*b).clone()));
+                                subject = Noun::cell(p, subject);
+                                formula = (*c).clone();
+                                continue;
+                            }
+                            _ => return Err(NockError),
+                        }
+                    }
+
+                    // Call
+                    Some(9) => {
+                        match tail.get() {
+                            Shape::Cell(ref axis, ref c) => {
+                                // Construct core.
+                                subject = try!(self.nock_on(subject.clone(),
+                                                       (*c).clone()));
+                                // Fetch from core using axis.
+                                formula = try!(nock::get_axis(axis, &subject));
+
+                                if let Some(f) = self.jets.get(&formula) {
+                                    return Ok(f(&subject));
+                                }
+
+                                continue;
+                            }
+                            _ => return Err(NockError),
+                        }
+                    }
+
+                    // Hint
+                    Some(10) => {
+                        match tail.get() {
+                            Shape::Cell(ref hint, ref c) => {
+                                let (id, clue) = match hint.get() {
+                                    Shape::Cell(ref p, ref q) => {
+                                        (p.clone(), try!(self.nock_on(subject.clone(), (*q).clone())))
+                                    }
+                                    Shape::Atom(_) => {
+                                        (hint.clone(), Noun::from(0u32))
+                                    }
+                                };
+
+                                // TODO: Handle other hint types than %fast.
+                                if String::from_noun(id).unwrap() == "fast" {
+                                    let core = try!(self.nock_on(subject.clone(), (*c).clone()));
+                                    if let Ok((name, axis, hooks)) = parse_fast_clue(&clue) {
+                                        if let Shape::Cell(ref battery, _) = core.get() {
+                                            try!(self.register(battery, name, axis, hooks));
+                                        } else {
+                                            return Err(NockError);
+                                        }
+                                    } else {
+                                        // println!("Unparseable clue...");
+                                    }
+
+                                    return Ok(core);
+                                }
+
+                                formula = (*c).clone();
+                                continue;
+                            }
+                            _ => return Err(NockError),
+                        }
+                    }
+
+                    // Unhandled opcode
+                    Some(_) => {
+                        return Err(NockError);
+                    }
+
+                    None => {
+                        if let Shape::Cell(_, _) = ops.get() {
+                            // Autocons
+                            let a = try!(self.nock_on(subject.clone(), ops.clone()));
+                            let b = try!(self.nock_on(subject, tail.clone()));
+                            return Ok(Noun::cell(a, b));
+                        } else {
+                            return Err(NockError);
+                        }
+                    }
+                }
+            } else {
+                return Err(NockError);
+            }
+        }
+    }
+
+    pub fn register(&mut self, battery: &Noun, name: String, axis: u32, hooks: Vec<(String, Noun)>) -> Result<(), NockError> {
+        if let Some(f) = match &name[..] {
+            "dec" => Some(jet::dec as fn(&Noun) -> Noun),
+            "bex" => Some(jet::bex as fn(&Noun) -> Noun),
+            "add" => Some(jet::add as fn(&Noun) -> Noun),
+            "mul" => Some(jet::mul as fn(&Noun) -> Noun),
+            "sub" => Some(jet::sub as fn(&Noun) -> Noun),
+            "div" => Some(jet::div as fn(&Noun) -> Noun),
+            "lth" => Some(jet::lth as fn(&Noun) -> Noun),
+            _ => None
+        } {
+            let key = (*battery).clone();
+            if !self.jets.contains_key(&key) {
+                println!("{} jetting '{}' ({})", symhash(&key), name, axis);
+                self.jets.insert(key, f);
+            }
+        } else {
+            println!("Unknown jet function {}: {:?}", name, hooks);
+        }
+        Ok(())
+    }
+}
+
+fn parse_fast_clue(clue: &Noun) -> Result<(String, u32, Vec<(String, Noun)>), NockError> {
+    if let Some((ref name, ref axis_formula, ref hooks)) = clue.get_122() {
+        let chum = try!(String::from_noun(name).map_err(|_| NockError));
+
+        let axis = if let Shape::Cell(ref a, ref b) = axis_formula.get() {
+            if let (Some(1), Some(0)) = (a.as_u32(), b.as_u32()) {
+                0
+            } else if let (Some(0), Some(axis)) = (a.as_u32(), b.as_u32()) {
+                axis
+            } else {
+                return Err(NockError);
+            }
+        } else {
+            return Err(NockError);
+        };
+
+        let hooks: Vec<(String, Noun)> = try!(FromNoun::from_noun(hooks).map_err(|_| NockError));
+
+        Ok((chum, axis, hooks))
+    } else {
+        Err(NockError)
+    }
+}
+
+/// Compute a hash value for a noun using the fast fnv hasher.
+pub fn hash(noun: &Noun) -> u64 {
+    use std::hash::{Hasher, Hash};
+
+    let mut fnv = fnv::FnvHasher::default();
+    noun.hash(&mut fnv);
+    fnv.finish()
+}
+
+/// A human-readable hash version.
+pub fn symhash(noun: &Noun) -> String {
+    fn proquint(buf: &mut String, mut b: u16) {
+        const C: [char; 16] = ['b', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'z'];
+        const V: [char; 4] = ['a', 'i', 'o', 'u'];
+        buf.push(C[(b % 16) as usize]);
+        b >>= 4;
+        buf.push(V[(b % 4) as usize]);
+        b >>= 2;
+        buf.push(C[(b % 16) as usize]);
+        b >>= 4;
+        buf.push(V[(b % 4) as usize]);
+        b >>= 2;
+        buf.push(C[(b % 16) as usize]);
+    }
+
+    let mut hash = hash(noun);
+    let mut ret = String::new();
+    for _ in 0..3 {
+        proquint(&mut ret, (hash % 0xFFFF) as u16);
+        hash >>= 16;
+        ret.push('-')
+    }
+    proquint(&mut ret, (hash % 0xFFFF) as u16);
+
+    ret
+}
 
 /// Unpack the data of an Urbit pillfile into a Nock noun.
 pub fn unpack_pill(mut buf: Vec<u8>) -> Result<Noun, &'static str> {

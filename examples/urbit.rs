@@ -7,7 +7,8 @@ use std::io::prelude::*;
 use std::fs::File;
 use num::bigint::BigUint;
 use num::traits::One;
-use nock::{Noun, Shape, nock_on};
+use nock::{Noun, Shape};
+use urbit::VM;
 
 fn main() {
     let mut file = File::open(env::args()
@@ -31,6 +32,7 @@ fn main() {
     println!("Pill has {} atoms", count);
 
     println!("Nocking pill");
-    let noun = nock_on(Noun::from(0u32), noun).unwrap();
+    let mut vm = VM::new();
+    let noun = vm.nock_on(Noun::from(0u32), noun).unwrap();
     println!("Result: {}", noun);
 }
