@@ -4,6 +4,7 @@ extern crate fnv;
 #[macro_use]
 extern crate nock;
 
+use std::io::{self, Write};
 use std::collections::HashMap;
 use bit_vec::BitVec;
 use num::bigint::BigUint;
@@ -16,16 +17,20 @@ mod jet;
 /// An Urbit virtual machine.
 pub struct VM {
     jets: HashMap<Noun, fn(&Noun) -> Noun>,
+    ticks: u64,
 }
 
 impl VM {
     pub fn new() -> VM {
         VM {
             jets: HashMap::new(),
+            ticks: 0,
         }
     }
 
     pub fn nock_on(&mut self, mut subject: Noun, mut formula: Noun) -> NockResult {
+        self.tick();
+
         // XXX: Copy-pasted a bunch from the reference implementation at
         // nock-rs. The nock_on machinery needs to be reasonably monolithical
         // because we're doing the looping manual tail call elimination.
@@ -240,6 +245,15 @@ impl VM {
             println!("Unknown jet function {}: {:?}", name, hooks);
         }
         Ok(())
+    }
+
+    fn tick(&mut self) {
+        self.ticks += 1;
+        if self.ticks % 100000 == 0 {
+            self.ticks = 0;
+            print!(".");
+            let _ = io::stdout().flush();
+        }
     }
 }
 
