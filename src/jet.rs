@@ -55,3 +55,24 @@ pub fn lth(subject: &Noun) -> Noun {
     let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
     Noun::from(x < y)
 }
+
+pub fn rsh(subject: &Noun) -> Noun {
+    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+
+    let (a, b, c): (usize, usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
+    Noun::from(c >> ((1 << a) * b))
+}
+
+pub fn lsh(subject: &Noun) -> Noun {
+    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+
+    let (a, b, c): (usize, usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
+    Noun::from(c << ((1 << a) * b))
+}
+
+pub fn mod_(subject: &Noun) -> Noun {
+    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+
+    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
+    Noun::from(x % y)
+}

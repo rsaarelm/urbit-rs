@@ -234,6 +234,9 @@ impl VM {
             "sub" => Some(jet::sub as fn(&Noun) -> Noun),
             "div" => Some(jet::div as fn(&Noun) -> Noun),
             "lth" => Some(jet::lth as fn(&Noun) -> Noun),
+            "rsh" => Some(jet::rsh as fn(&Noun) -> Noun),
+            "lsh" => Some(jet::lsh as fn(&Noun) -> Noun),
+            "mod" => Some(jet::mod_ as fn(&Noun) -> Noun),
             _ => None
         } {
             let key = (*battery).clone();
