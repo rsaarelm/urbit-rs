@@ -19,6 +19,8 @@ mod jet;
 /// An Urbit virtual machine.
 pub struct VM {
     jets: HashMap<Noun, fn(&Noun) -> Noun>,
+    // Just so we don't make noise about an unimplemented jet more than once.
+    unimplemented_jets: HashMap<String, usize>,
     ticks: u64,
 }
 
@@ -26,6 +28,7 @@ impl VM {
     pub fn new() -> VM {
         VM {
             jets: HashMap::new(),
+            unimplemented_jets: HashMap::new(),
             ticks: 0,
         }
     }
@@ -255,7 +258,20 @@ impl VM {
                 self.jets.insert(key, f);
             }
         } else {
-            println!("Unknown jet function {}: {:?}", name, hooks);
+            if !self.unimplemented_jets.contains_key(&name) {
+                println!("Unknown jet function {}: {:?}", name, hooks);
+                self.unimplemented_jets.insert(name, 0);
+            } else {
+                //if let Some(x) = self.unimplemented_jets.get_mut(&name) {
+                //    *x += 1;
+                //    if *x % 10000 == 0 {
+                //        // Complain about common unjetted words.
+                //        print!(" {} ", name);
+                //    }
+                //} else {
+                //    panic!("Invalid hash state");
+                //}
+            }
         }
         Ok(())
     }
