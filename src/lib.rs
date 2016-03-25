@@ -1,9 +1,11 @@
 extern crate bit_vec;
+extern crate rand;
 extern crate num;
 extern crate fnv;
 #[macro_use]
 extern crate nock;
 
+use rand::Rng;
 use std::io::{self, Write};
 use std::collections::HashMap;
 use bit_vec::BitVec;
@@ -157,7 +159,15 @@ impl VM {
                                 // Fetch from core using axis.
                                 formula = try!(nock::get_axis(axis, &subject));
 
-                                if let Some(f) = self.jets.get(&formula) {
+                                let x = self.jets.get(&formula).map(|&x| x);
+                                if let Some(f) = x {
+                                    let result = f(&subject);
+                                    // Do random spot-checks against the actual nock code.
+                                    if rand::thread_rng().gen_range(0.0, 1.0) < 0.00001 {
+                                        let verify = self.nock_on(subject.clone(), formula.clone()).unwrap();
+                                        assert!(verify == result, "{} jet returned {:?}, expected {:?}", symhash(&formula), result, verify);
+                                        print!("+");
+                                    }
                                     return Ok(f(&subject));
                                 }
 

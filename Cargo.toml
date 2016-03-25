@@ -10,6 +10,7 @@ license = "MIT OR Apache-2.0"
 fnv = "1.0"
 time = "0.1"
 num = "0.1"
+rand = "0.3"
 bit-vec = "0.4"
 
 [dependencies.nock]
