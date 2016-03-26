@@ -31,6 +31,7 @@ impl Jet {
             "mix" => Some(mix as fn(&Noun) -> Noun),
             "met" => Some(met as fn(&Noun) -> Noun),
             "cut" => Some(cut as fn(&Noun) -> Noun),
+            "mug" => Some(mug as fn(&Noun) -> Noun),
             _ => None,
         };
 
@@ -164,4 +165,9 @@ pub fn cut(subject: &Noun) -> Noun {
     d = d % BigUint::from_usize(c).unwrap();
 
     Noun::from(d)
+}
+
+pub fn mug(subject: &Noun) -> Noun {
+    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+    Noun::from(arg.mug())
 }
