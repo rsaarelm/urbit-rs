@@ -19,6 +19,8 @@ use nock::{DigitSlice, FromDigits};
 
 mod jet;
 
+const SPOT_TEST_JETS: bool = false;
+
 /// An Urbit virtual machine.
 pub struct VM {
     jets: HashMap<Noun, fn(&Noun) -> Noun>,
@@ -164,9 +166,15 @@ impl VM {
                                 if let Some(f) = x {
                                     let result = f(&subject);
                                     // Do random spot-checks against the actual nock code.
-                                    if rand::thread_rng().gen_range(0.0, 1.0) < 0.00001 {
-                                        let verify = self.nock_on(subject.clone(), formula.clone()).unwrap();
-                                        assert!(verify == result, "{} jet returned {:?}, expected {:?}", symhash(&formula), result, verify);
+                                    if SPOT_TEST_JETS &&
+                                       rand::thread_rng().gen_range(0.0, 1.0) < 0.00001 {
+                                        let verify = self.nock_on(subject.clone(), formula.clone())
+                                                         .unwrap();
+                                        assert!(verify == result,
+                                                "{} jet returned {:?}, expected {:?}",
+                                                symhash(&formula),
+                                                result,
+                                                verify);
                                         print!("+");
                                     }
                                     return Ok(f(&subject));
