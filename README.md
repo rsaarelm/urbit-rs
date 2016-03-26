@@ -1,5 +1,14 @@
 Urbit utilities
 
+To use the pill evaluator example, get a valid urbit pillfile from
+somewhere, eg
+
+    curl -o urbit.pill http://bootstrap.urbit.org/latest.pill
+
+and then do
+
+    cargo run --release --example urbit -- urbit.pill
+
 ## License
 
 Licensed under either of
