@@ -55,8 +55,7 @@ impl VM {
                     Some(2) => {
                         match tail.get() {
                             Shape::Cell(ref b, ref c) => {
-                                let p = try!(self.nock_on(subject.clone(),
-                                                     (*b).clone()));
+                                let p = try!(self.nock_on(subject.clone(), (*b).clone()));
                                 let q = try!(self.nock_on(subject, (*c).clone()));
                                 subject = p;
                                 formula = q;
@@ -81,8 +80,7 @@ impl VM {
                         return match p.get() {
                             Shape::Atom(ref x) => {
                                 // TODO: Non-bignum optimization
-                                Ok(Noun::from(BigUint::from_digits(x).unwrap() +
-                                              BigUint::one()))
+                                Ok(Noun::from(BigUint::from_digits(x).unwrap() + BigUint::one()))
                             }
                             _ => Err(NockError),
                         };
@@ -131,8 +129,7 @@ impl VM {
                     Some(7) => {
                         match tail.get() {
                             Shape::Cell(ref b, ref c) => {
-                                let p = try!(self.nock_on(subject.clone(),
-                                                     (*b).clone()));
+                                let p = try!(self.nock_on(subject.clone(), (*b).clone()));
                                 subject = p;
                                 formula = (*c).clone();
                                 continue;
@@ -145,8 +142,7 @@ impl VM {
                     Some(8) => {
                         match tail.get() {
                             Shape::Cell(ref b, ref c) => {
-                                let p = try!(self.nock_on(subject.clone(),
-                                                     (*b).clone()));
+                                let p = try!(self.nock_on(subject.clone(), (*b).clone()));
                                 subject = Noun::cell(p, subject);
                                 formula = (*c).clone();
                                 continue;
@@ -160,8 +156,7 @@ impl VM {
                         match tail.get() {
                             Shape::Cell(ref axis, ref c) => {
                                 // Construct core.
-                                subject = try!(self.nock_on(subject.clone(),
-                                                       (*c).clone()));
+                                subject = try!(self.nock_on(subject.clone(), (*c).clone()));
                                 // Fetch from core using axis.
                                 formula = try!(nock::get_axis(axis, &subject));
 
@@ -189,11 +184,10 @@ impl VM {
                             Shape::Cell(ref hint, ref c) => {
                                 let (id, clue) = match hint.get() {
                                     Shape::Cell(ref p, ref q) => {
-                                        (p.clone(), try!(self.nock_on(subject.clone(), (*q).clone())))
+                                        (p.clone(),
+                                         try!(self.nock_on(subject.clone(), (*q).clone())))
                                     }
-                                    Shape::Atom(_) => {
-                                        (hint.clone(), Noun::from(0u32))
-                                    }
+                                    Shape::Atom(_) => (hint.clone(), Noun::from(0u32)),
                                 };
 
                                 // TODO: Handle other hint types than %fast.
@@ -241,7 +235,12 @@ impl VM {
         }
     }
 
-    pub fn register(&mut self, battery: &Noun, name: String, axis: u32, hooks: Vec<(String, Noun)>) -> Result<(), NockError> {
+    pub fn register(&mut self,
+                    battery: &Noun,
+                    name: String,
+                    axis: u32,
+                    hooks: Vec<(String, Noun)>)
+                    -> Result<(), NockError> {
         if let Some(f) = match &name[..] {
             "dec" => Some(jet::dec as fn(&Noun) -> Noun),
             "bex" => Some(jet::bex as fn(&Noun) -> Noun),
@@ -253,7 +252,7 @@ impl VM {
             "rsh" => Some(jet::rsh as fn(&Noun) -> Noun),
             "lsh" => Some(jet::lsh as fn(&Noun) -> Noun),
             "mod" => Some(jet::mod_ as fn(&Noun) -> Noun),
-            _ => None
+            _ => None,
         } {
             let key = (*battery).clone();
             if !self.jets.contains_key(&key) {
@@ -325,7 +324,8 @@ pub fn hash(noun: &Noun) -> u64 {
 /// A human-readable hash version.
 pub fn symhash(noun: &Noun) -> String {
     fn proquint(buf: &mut String, mut b: u16) {
-        const C: [char; 16] = ['b', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'z'];
+        const C: [char; 16] = ['b', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'r', 's',
+                               't', 'v', 'z'];
         const V: [char; 4] = ['a', 'i', 'o', 'u'];
         buf.push(C[(b % 16) as usize]);
         b >>= 4;
