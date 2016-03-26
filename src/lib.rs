@@ -15,6 +15,7 @@ use bit_vec::BitVec;
 use num::{BigUint, One, ToPrimitive};
 use nock::{Noun, NockResult, NockError, Shape, FromNoun};
 use nock::{DigitSlice, FromDigits};
+use jet::Jet;
 
 mod jet;
 
@@ -22,9 +23,7 @@ const SPOT_TEST_JETS: bool = false;
 
 /// An Urbit virtual machine.
 pub struct VM {
-    jets: HashMap<Noun, fn(&Noun) -> Noun>,
-    // Just so we don't make noise about an unimplemented jet more than once.
-    unimplemented_jets: HashMap<String, usize>,
+    jets: HashMap<Noun, jet::Jet>,
     ticks: u64,
 }
 
@@ -32,7 +31,6 @@ impl VM {
     pub fn new() -> VM {
         VM {
             jets: HashMap::new(),
-            unimplemented_jets: HashMap::new(),
             ticks: 0,
         }
     }
@@ -161,12 +159,27 @@ impl VM {
                                 // Fetch from core using axis.
                                 formula = try!(nock::get_axis(axis, &subject));
 
-                                let x = self.jets.get(&formula).map(|&x| x);
-                                if let Some(f) = x {
-                                    let result = f(&subject);
-                                    // Do random spot-checks against the actual nock code.
-                                    if SPOT_TEST_JETS &&
-                                       rand::thread_rng().gen_range(0.0, 1.0) < 0.00001 {
+                                let mut jetted_result = None;
+
+                                if let Some(jet) = self.jets.get_mut(&formula) {
+                                    jet.calls += 1;
+
+                                    // Complain about frequently called
+                                    // missing jets.
+                                    if jet.calls % 10000 == 0 && jet.jet.is_none() {
+                                        print!(" {} ", jet.name);
+                                    }
+
+                                    if let Some(f) = jet.jet {
+                                        jetted_result = Some(f(&subject));
+                                    }
+                                }
+
+                                if let Some(result) = jetted_result {
+                                    // Randomly check jets against naive nock.
+                                    let do_check = SPOT_TEST_JETS &&
+                                                   rand::thread_rng().gen_range(0.0, 1.0) < 0.00001;
+                                    if do_check {
                                         let verify = self.nock_on(subject.clone(), formula.clone())
                                                          .unwrap();
                                         assert!(verify == result,
@@ -176,7 +189,8 @@ impl VM {
                                                 verify);
                                         print!("+");
                                     }
-                                    return Ok(f(&subject));
+
+                                    return Ok(result);
                                 }
 
                                 continue;
@@ -202,7 +216,11 @@ impl VM {
                                     let core = try!(self.nock_on(subject.clone(), (*c).clone()));
                                     if let Ok((name, axis, hooks)) = parse_fast_clue(&clue) {
                                         if let Shape::Cell(ref battery, _) = core.get() {
-                                            try!(self.register(battery, name, axis, hooks));
+                                            let jet = Jet::new(name,
+                                                               (*battery).clone(),
+                                                               axis,
+                                                               hooks);
+                                            self.jets.insert((*battery).clone(), jet);
                                         } else {
                                             return Err(NockError);
                                         }
@@ -240,49 +258,6 @@ impl VM {
                 return Err(NockError);
             }
         }
-    }
-
-    pub fn register(&mut self,
-                    battery: &Noun,
-                    name: String,
-                    axis: u32,
-                    hooks: Vec<(String, Noun)>)
-                    -> Result<(), NockError> {
-        if let Some(f) = match &name[..] {
-            "dec" => Some(jet::dec as fn(&Noun) -> Noun),
-            "bex" => Some(jet::bex as fn(&Noun) -> Noun),
-            "add" => Some(jet::add as fn(&Noun) -> Noun),
-            "mul" => Some(jet::mul as fn(&Noun) -> Noun),
-            "sub" => Some(jet::sub as fn(&Noun) -> Noun),
-            "div" => Some(jet::div as fn(&Noun) -> Noun),
-            "lth" => Some(jet::lth as fn(&Noun) -> Noun),
-            "rsh" => Some(jet::rsh as fn(&Noun) -> Noun),
-            "lsh" => Some(jet::lsh as fn(&Noun) -> Noun),
-            "mod" => Some(jet::mod_ as fn(&Noun) -> Noun),
-            _ => None,
-        } {
-            let key = (*battery).clone();
-            if !self.jets.contains_key(&key) {
-                println!("{} jetting '{}' ({})", symhash(&key), name, axis);
-                self.jets.insert(key, f);
-            }
-        } else {
-            if !self.unimplemented_jets.contains_key(&name) {
-                println!("Unknown jet function {}: {:?}", name, hooks);
-                self.unimplemented_jets.insert(name, 0);
-            } else {
-                //if let Some(x) = self.unimplemented_jets.get_mut(&name) {
-                //    *x += 1;
-                //    if *x % 10000 == 0 {
-                //        // Complain about common unjetted words.
-                //        print!(" {} ", name);
-                //    }
-                //} else {
-                //    panic!("Invalid hash state");
-                //}
-            }
-        }
-        Ok(())
     }
 
     fn tick(&mut self) {
