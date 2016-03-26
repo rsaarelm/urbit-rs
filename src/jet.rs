@@ -30,6 +30,7 @@ impl Jet {
             "end" => Some(end as fn(&Noun) -> Noun),
             "mix" => Some(mix as fn(&Noun) -> Noun),
             "met" => Some(met as fn(&Noun) -> Noun),
+            "cut" => Some(cut as fn(&Noun) -> Noun),
             _ => None,
         };
 
@@ -151,4 +152,16 @@ pub fn met(subject: &Noun) -> Noun {
         ret += 1;
     }
     Noun::from(ret)
+}
+
+pub fn cut(subject: &Noun) -> Noun {
+    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+
+    let (a, (mut b, mut c), mut d): (usize, (usize, usize), BigUint) = FromNoun::from_noun(&arg).unwrap();
+    b = b << a;
+    c = c << (1 << a);
+    d = d >> b;
+    d = d % BigUint::from_usize(c).unwrap();
+
+    Noun::from(d)
 }
