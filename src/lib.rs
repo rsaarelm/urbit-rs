@@ -12,8 +12,7 @@ use rand::Rng;
 use std::io::{self, Write};
 use std::collections::HashMap;
 use bit_vec::BitVec;
-use num::bigint::BigUint;
-use num::traits::{One, ToPrimitive};
+use num::{BigUint, One, ToPrimitive};
 use nock::{Noun, NockResult, NockError, Shape, FromNoun};
 use nock::{DigitSlice, FromDigits};
 
