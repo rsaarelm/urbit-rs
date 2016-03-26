@@ -1,3 +1,6 @@
+#![feature(alloc_system)]
+
+extern crate alloc_system;
 extern crate bit_vec;
 extern crate rand;
 extern crate num;
