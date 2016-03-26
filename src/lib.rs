@@ -312,15 +312,6 @@ fn parse_fast_clue(clue: &Noun) -> Result<(String, u32, Vec<(String, Noun)>), No
     }
 }
 
-/// Compute a hash value for a noun using the fast fnv hasher.
-pub fn hash(noun: &Noun) -> u64 {
-    use std::hash::{Hasher, Hash};
-
-    let mut fnv = fnv::FnvHasher::default();
-    noun.hash(&mut fnv);
-    fnv.finish()
-}
-
 /// A human-readable hash version.
 pub fn symhash(noun: &Noun) -> String {
     fn proquint(buf: &mut String, mut b: u16) {
@@ -338,13 +329,11 @@ pub fn symhash(noun: &Noun) -> String {
         buf.push(C[(b % 16) as usize]);
     }
 
-    let mut hash = hash(noun);
+    let mut hash = noun.mug();
     let mut ret = String::new();
-    for _ in 0..3 {
-        proquint(&mut ret, (hash % 0xFFFF) as u16);
-        hash >>= 16;
-        ret.push('-')
-    }
+    proquint(&mut ret, (hash % 0xFFFF) as u16);
+    hash >>= 16;
+    ret.push('-');
     proquint(&mut ret, (hash % 0xFFFF) as u16);
 
     ret
