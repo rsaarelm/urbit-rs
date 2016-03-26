@@ -281,7 +281,7 @@ impl VM {
 
     fn tick(&mut self) {
         self.ticks += 1;
-        if self.ticks % 100000 == 0 {
+        if self.ticks % 1000000 == 0 {
             self.ticks = 0;
             print!(".");
             let _ = io::stdout().flush();
