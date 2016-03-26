@@ -164,12 +164,6 @@ impl VM {
                                 if let Some(jet) = self.jets.get_mut(&formula) {
                                     jet.calls += 1;
 
-                                    // Complain about frequently called
-                                    // missing jets.
-                                    if jet.calls % 10000 == 0 && jet.jet.is_none() {
-                                        print!(" {} ", jet.name);
-                                    }
-
                                     if let Some(f) = jet.jet {
                                         jetted_result = Some(f(&subject));
                                     }
@@ -177,8 +171,9 @@ impl VM {
 
                                 if let Some(result) = jetted_result {
                                     // Randomly check jets against naive nock.
-                                    let do_check = SPOT_TEST_JETS &&
+                                    let /* mut */ do_check = SPOT_TEST_JETS &&
                                                    rand::thread_rng().gen_range(0.0, 1.0) < 0.00001;
+                                    //if self.jets.get(&formula).map_or("", |x| &x.name[..]) == "cut" { do_check = true; }
                                     if do_check {
                                         let verify = self.nock_on(subject.clone(), formula.clone())
                                                          .unwrap();
@@ -216,11 +211,13 @@ impl VM {
                                     let core = try!(self.nock_on(subject.clone(), (*c).clone()));
                                     if let Ok((name, axis, hooks)) = parse_fast_clue(&clue) {
                                         if let Shape::Cell(ref battery, _) = core.get() {
-                                            let jet = Jet::new(name,
-                                                               (*battery).clone(),
-                                                               axis,
-                                                               hooks);
-                                            self.jets.insert((*battery).clone(), jet);
+                                            if !self.jets.contains_key(battery) {
+                                                let jet = Jet::new(name,
+                                                                   (*battery).clone(),
+                                                                   axis,
+                                                                   hooks);
+                                                self.jets.insert((*battery).clone(), jet);
+                                            }
                                         } else {
                                             return Err(NockError);
                                         }
@@ -261,11 +258,32 @@ impl VM {
     }
 
     fn tick(&mut self) {
-        self.ticks += 1;
+        self.ticks = self.ticks.wrapping_add(1);
         if self.ticks % 1000000 == 0 {
-            self.ticks = 0;
             print!(".");
             let _ = io::stdout().flush();
+        }
+
+        if self.ticks % 100000000 == 0 {
+            println!("");
+            self.print_status();
+        }
+    }
+
+    pub fn print_status(&self) {
+        let mut total_count = 0;
+        let mut jets: Vec<&Jet> = self.jets.iter().map(|(_, x)| x).collect();
+        jets.sort_by(|a, b| b.calls.cmp(&a.calls));
+        for jet in jets.iter() {
+            if jet.calls < 100 || (jet.calls as f32) / (total_count as f32) < 1e-6 {
+                // Don't care about the little things
+                println!(" ...");
+                break;
+            }
+            println!("{}{} called {} times",
+                     if jet.jet.is_some() { '*' } else { ' ' },
+                     jet.name, jet.calls);
+            total_count += jet.calls;
         }
     }
 }
