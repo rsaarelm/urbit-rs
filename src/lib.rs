@@ -38,7 +38,9 @@ impl VM {
     }
 
     pub fn nock_on(&mut self, mut subject: Noun, mut formula: Noun) -> NockResult {
-        self.tick();
+        if !self.test_mode {
+            self.tick();
+        }
 
         // XXX: Copy-pasted a bunch from the reference implementation at
         // nock-rs. The nock_on machinery needs to be reasonably monolithical
@@ -179,6 +181,7 @@ impl VM {
                                     if self.test_mode { do_check = false; }
 
                                     if do_check {
+                                        self.test_mode = true;
                                         let verify = self.nock_on(subject.clone(), formula.clone())
                                                          .unwrap();
                                         assert!(verify == result,
@@ -187,6 +190,7 @@ impl VM {
                                                 result,
                                                 verify);
                                         print!("+");
+                                        self.test_mode = false;
                                     }
 
                                     return Ok(result);
