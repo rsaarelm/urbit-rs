@@ -149,24 +149,11 @@ pub fn met(subject: &Noun) -> Noun {
     if let Shape::Cell(ref bloq, ref b) = arg.get() {
         let bloq: usize = FromNoun::from_noun(bloq).unwrap();
 
-        let mut bits;
-        if let Shape::Atom(ref atom) = b.get() {
-            bits = atom.len() * 8;
-            if bits > 0 {
-                let last = atom[atom.len() - 1];
-                for i in (1..8).rev() {
-                    if last & (1 << i) == 0 {
-                        bits -= 1;
-                    } else {
-                        break;
-                    }
-                }
-            }
+        let bits = if let Shape::Atom(ref atom) = b.get() {
+            nock::msb(atom)
         } else {
             panic!("Bad atom");
-        }
-
-        bits += (1 << bloq) - 1;
+        } + (1 << bloq) - 1;
 
         Noun::from(bits / (1 << bloq))
     } else {
