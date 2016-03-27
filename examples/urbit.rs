@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use num::bigint::BigUint;
 use num::traits::One;
-use nock::{Noun, Shape};
+use nock::{Nock, Noun, Shape};
 use urbit::VM;
 
 fn main() {
