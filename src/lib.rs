@@ -34,8 +34,10 @@ impl Nock for VM {
 
     fn hint(&mut self, subject: &Noun, hint: &Noun, c: &Noun) -> Result<(), NockError> {
         let (id, clue) = match hint.get() {
-            Shape::Cell(ref p, ref q) =>
-                (p.clone(), try!(self.nock_on((*subject).clone(), (*q).clone()))),
+            Shape::Cell(ref p, ref q) => {
+                (p.clone(),
+                 try!(self.nock_on((*subject).clone(), (*q).clone())))
+            }
             Shape::Atom(_) => (hint, Noun::from(0u32)),
         };
 
@@ -45,10 +47,7 @@ impl Nock for VM {
             if let Ok((name, axis, hooks)) = parse_fast_clue(&clue) {
                 if let Shape::Cell(ref battery, _) = core.get() {
                     if !self.jets.contains_key(battery) {
-                        let jet = Jet::new(name,
-                                           (*battery).clone(),
-                                           axis,
-                                           hooks);
+                        let jet = Jet::new(name, (*battery).clone(), axis, hooks);
                         self.jets.insert((*battery).clone(), jet);
                     }
                 } else {
@@ -64,9 +63,7 @@ impl Nock for VM {
 
 impl VM {
     pub fn new() -> VM {
-        VM {
-            jets: HashMap::new(),
-        }
+        VM { jets: HashMap::new() }
     }
 
     pub fn print_status(&self) {
@@ -80,8 +77,13 @@ impl VM {
                 break;
             }
             println!("{}{} called {} times",
-                     if jet.jet.is_some() { '*' } else { ' ' },
-                     jet.name, jet.calls);
+                     if jet.jet.is_some() {
+                         '*'
+                     } else {
+                         ' '
+                     },
+                     jet.name,
+                     jet.calls);
             total_count += jet.calls;
         }
     }

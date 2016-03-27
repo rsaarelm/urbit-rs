@@ -164,7 +164,8 @@ pub fn met(subject: &Noun) -> Noun {
 pub fn cut(subject: &Noun) -> Noun {
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
 
-    let (a, (mut b, mut c), mut d): (usize, (usize, usize), BigUint) = FromNoun::from_noun(&arg).unwrap();
+    let (a, (mut b, mut c), mut d): (usize, (usize, usize), BigUint) = FromNoun::from_noun(&arg)
+                                                                           .unwrap();
     b = b << a;
     c = c << (1 << a);
     d = d >> b;
