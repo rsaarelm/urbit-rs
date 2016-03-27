@@ -33,6 +33,7 @@ fn main() {
 
     println!("Nocking pill");
     let mut vm = VM::new();
-    let noun = vm.nock_on(Noun::from(0u32), noun).unwrap();
-    println!("Result: {}", noun);
+    let noun = vm.nock_on(Noun::from(0u32), noun);
+    vm.print_status();
+    println!("Result: {:?}", noun);
 }
