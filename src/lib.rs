@@ -25,6 +25,7 @@ const SPOT_TEST_JETS: bool = false;
 pub struct VM {
     jets: HashMap<Noun, jet::Jet>,
     ticks: u64,
+    test_mode: bool,
 }
 
 impl VM {
@@ -32,6 +33,7 @@ impl VM {
         VM {
             jets: HashMap::new(),
             ticks: 0,
+            test_mode: false,
         }
     }
 
@@ -171,9 +173,11 @@ impl VM {
 
                                 if let Some(result) = jetted_result {
                                     // Randomly check jets against naive nock.
-                                    let /* mut */ do_check = SPOT_TEST_JETS &&
+                                    let mut do_check = SPOT_TEST_JETS &&
                                                    rand::thread_rng().gen_range(0.0, 1.0) < 0.00001;
                                     //if self.jets.get(&formula).map_or("", |x| &x.name[..]) == "cut" { do_check = true; }
+                                    if self.test_mode { do_check = false; }
+
                                     if do_check {
                                         let verify = self.nock_on(subject.clone(), formula.clone())
                                                          .unwrap();
