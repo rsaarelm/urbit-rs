@@ -1,8 +1,8 @@
 use std::hash;
 use std::iter::FromIterator;
 use std::collections::HashMap;
-use num::{BigUint, FromPrimitive, Zero, One};
-use nock::{self, Noun, FromNoun};
+use num::{BigUint, FromPrimitive, One};
+use nock::{self, Shape, Noun, FromNoun};
 
 pub struct Jet {
     pub name: String,
@@ -146,13 +146,32 @@ pub fn mix(subject: &Noun) -> Noun {
 pub fn met(subject: &Noun) -> Noun {
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
 
-    let (bloq, mut atom): (usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    let mut ret: usize = 0;
-    while atom != Zero::zero() {
-        atom = atom >> (1 << bloq);
-        ret += 1;
+    if let Shape::Cell(ref bloq, ref b) = arg.get() {
+        let bloq: usize = FromNoun::from_noun(bloq).unwrap();
+
+        let mut bits;
+        if let Shape::Atom(ref atom) = b.get() {
+            bits = atom.len() * 8;
+            if bits > 0 {
+                let last = atom[atom.len() - 1];
+                for i in (1..8).rev() {
+                    if last & (1 << i) == 0 {
+                        bits -= 1;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        } else {
+            panic!("Bad atom");
+        }
+
+        bits += (1 << bloq) - 1;
+
+        Noun::from(bits / (1 << bloq))
+    } else {
+        panic!("Bad argument");
     }
-    Noun::from(ret)
 }
 
 pub fn cut(subject: &Noun) -> Noun {
