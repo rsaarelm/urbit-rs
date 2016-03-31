@@ -51,7 +51,7 @@ impl Nock for VM {
                         self.jets.insert((*battery).clone(), jet);
                     }
                 } else {
-                    return Err(NockError);
+                    return Err(NockError(format!("hint")));
                 }
             } else {
                 // println!("Unparseable clue...");
@@ -91,7 +91,7 @@ impl VM {
 
 fn parse_fast_clue(clue: &Noun) -> Result<(String, u32, Vec<(String, Noun)>), NockError> {
     if let Some((ref name, ref axis_formula, ref hooks)) = clue.get_122() {
-        let chum = try!(String::from_noun(name).map_err(|_| NockError));
+        let chum = try!(String::from_noun(name).map_err(|_| NockError(format!("hint"))));
 
         let axis = if let Shape::Cell(ref a, ref b) = axis_formula.get() {
             if let (Some(1), Some(0)) = (a.as_u32(), b.as_u32()) {
@@ -99,17 +99,17 @@ fn parse_fast_clue(clue: &Noun) -> Result<(String, u32, Vec<(String, Noun)>), No
             } else if let (Some(0), Some(axis)) = (a.as_u32(), b.as_u32()) {
                 axis
             } else {
-                return Err(NockError);
+                return Err(NockError(format!("hint")));
             }
         } else {
-            return Err(NockError);
+            return Err(NockError(format!("hint")));
         };
 
-        let hooks: Vec<(String, Noun)> = try!(FromNoun::from_noun(hooks).map_err(|_| NockError));
+        let hooks: Vec<(String, Noun)> = try!(FromNoun::from_noun(hooks).map_err(|_| NockError(format!("hint"))));
 
         Ok((chum, axis, hooks))
     } else {
-        Err(NockError)
+        Err(NockError(format!("hint")))
     }
 }
 

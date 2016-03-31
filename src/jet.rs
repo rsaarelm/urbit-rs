@@ -1,8 +1,34 @@
+use std::error::Error;
+use std::fmt;
 use std::hash;
 use std::iter::FromIterator;
 use std::collections::HashMap;
 use num::{BigUint, FromPrimitive, One};
 use nock::{self, Shape, Noun, FromNoun};
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct JetError(String);
+
+pub type JetResult<T> = Result<T, JetError>;
+
+impl fmt::Display for JetError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for JetError {
+    fn description(&self) -> &str {
+        &self.0[..]
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
+/// Return with an error from a jet.
+macro_rules! bail( ($($arg:tt)*) => ( return Err(JetError(format!($($arg)*))); ));
 
 pub struct Jet {
     pub name: String,
