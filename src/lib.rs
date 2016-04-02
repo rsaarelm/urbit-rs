@@ -10,7 +10,7 @@ extern crate nock;
 use std::collections::HashMap;
 use bit_vec::BitVec;
 use num::{BigUint, One, ToPrimitive};
-use nock::{Nock, Noun, NockError, Shape, FromNoun};
+use nock::{Nock, Noun, NockError, NockResult, Shape, FromNoun};
 use jet::Jet;
 
 mod jet;
@@ -21,12 +21,12 @@ pub struct VM {
 }
 
 impl Nock for VM {
-    fn call(&mut self, subject: &Noun, formula: &Noun) -> Option<Noun> {
+    fn call(&mut self, subject: &Noun, formula: &Noun) -> Option<NockResult> {
         if let Some(jet) = self.jets.get_mut(formula) {
             jet.calls += 1;
 
             if let Some(f) = jet.jet {
-                return Some(f(subject));
+                return Some(Ok(f(subject)));
             }
         }
         None
