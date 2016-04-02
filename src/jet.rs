@@ -3,11 +3,11 @@ use std::fmt;
 use std::hash;
 use std::iter::FromIterator;
 use std::collections::HashMap;
-use num::{BigUint, FromPrimitive, One};
-use nock::{self, Shape, Noun, FromNoun};
+use nock::{self, Noun, FromNoun, ToNoun, NockError, NockResult};
+use jets;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct JetError(String);
+pub struct JetError(pub String);
 
 pub type JetResult<T> = Result<T, JetError>;
 
@@ -27,12 +27,9 @@ impl Error for JetError {
     }
 }
 
-/// Return with an error from a jet.
-macro_rules! bail( ($($arg:tt)*) => ( return Err(JetError(format!($($arg)*))); ));
-
 pub struct Jet {
     pub name: String,
-    pub jet: Option<fn(&Noun) -> Noun>,
+    pub jet: Option<fn(&Noun) -> NockResult>,
     pub battery: Noun,
     // TODO: What do we do with these?
     pub axis: u32,
@@ -42,25 +39,7 @@ pub struct Jet {
 
 impl Jet {
     pub fn new(name: String, battery: Noun, axis: u32, hooks: Vec<(String, Noun)>) -> Jet {
-        let jet = match &name[..] {
-            "dec" => Some(dec as fn(&Noun) -> Noun),
-            "bex" => Some(bex as fn(&Noun) -> Noun),
-            "add" => Some(add as fn(&Noun) -> Noun),
-            "mul" => Some(mul as fn(&Noun) -> Noun),
-            "sub" => Some(sub as fn(&Noun) -> Noun),
-            "div" => Some(div as fn(&Noun) -> Noun),
-            "lth" => Some(lth as fn(&Noun) -> Noun),
-            "rsh" => Some(rsh as fn(&Noun) -> Noun),
-            "lsh" => Some(lsh as fn(&Noun) -> Noun),
-            "mod" => Some(mod_ as fn(&Noun) -> Noun),
-            "end" => Some(end as fn(&Noun) -> Noun),
-            "mix" => Some(mix as fn(&Noun) -> Noun),
-            "met" => Some(met as fn(&Noun) -> Noun),
-            "cut" => Some(cut as fn(&Noun) -> Noun),
-            "mug" => Some(mug as fn(&Noun) -> Noun),
-            _ => None,
-        };
-
+        let jet = match_jet(&name[..]);
         Jet {
             name: name,
             jet: jet,
@@ -78,129 +57,84 @@ impl hash::Hash for Jet {
     }
 }
 
-// FIXME: Needing to do the get_axis on subject.
-// TODO: Error handling that isn't panicing.
-
-pub fn dec(subject: &Noun) -> Noun {
-    // XXX: How do we know the axis here?
+/// Wrap a single-argument function as a jet.
+///
+/// The argument will be extracted from axis 6 of subject.
+#[inline]
+fn wrap1<T1, U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
+where T1: FromNoun,
+      U: ToNoun,
+      F: Fn(T1) -> JetResult<U> {
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let n = BigUint::from_noun(&arg).unwrap();
-    Noun::from(n - BigUint::one())
+    let t1: T1 = try!(FromNoun::from_noun(&arg));
+    let ret = try!(f(t1).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
+    Ok(ret.to_noun())
 }
 
-pub fn bex(subject: &Noun) -> Noun {
+#[inline]
+fn wrap2<T1, T2, U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
+where T1: FromNoun,
+      T2: FromNoun,
+      U: ToNoun,
+      F: Fn(T1, T2) -> JetResult<U> {
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    // XXX: Will fail if arg is above machine word size.
-    let n: usize = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(BigUint::one() << n)
+    let (t1, t2): (T1, T2) = try!(FromNoun::from_noun(&arg));
+    let ret = try!(f(t1, t2).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
+    Ok(ret.to_noun())
 }
 
-pub fn add(subject: &Noun) -> Noun {
+#[inline]
+fn wrap3<T1, T2, T3, U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
+where T1: FromNoun,
+      T2: FromNoun,
+      T3: FromNoun,
+      U: ToNoun,
+      F: Fn(T1, T2, T3) -> JetResult<U> {
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x + y)
+    let (t1, t2, t3): (T1, T2, T3) = try!(FromNoun::from_noun(&arg));
+    let ret = try!(f(t1, t2, t3).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
+    Ok(ret.to_noun())
 }
 
-pub fn mul(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x * y)
+/*
+/// Give jet full access to the subject.
+#[inline]
+fn wrap_raw<U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
+where U: ToNoun,
+      F: Fn(&Noun) -> JetResult<U> {
+    let ret = try!(f(subject).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
+    Ok(ret.to_noun())
 }
+*/
 
-pub fn sub(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
+/// Construct a jet matcher from tuples of (internal_jet_function, urbit_jet_name, jet_wrapper_function).
+macro_rules! match_jet{
+    ($($f:ident: $name:expr, $wrap_fn:ident;)*) => {
+        $(fn $f(subject: &Noun) -> NockResult { $wrap_fn($name, jets::$f, subject) })*
 
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x - y)
-}
-
-pub fn div(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x / y)
-}
-
-pub fn lth(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x < y)
-}
-
-pub fn rsh(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (a, b, c): (usize, usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(c >> ((1 << a) * b))
-}
-
-pub fn lsh(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (a, b, c): (usize, usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(c << ((1 << a) * b))
-}
-
-pub fn mod_(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (x, y): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-    Noun::from(x % y)
-}
-
-pub fn end(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (a, b, c): (usize, usize, BigUint) = FromNoun::from_noun(&arg).unwrap();
-
-    Noun::from(c % BigUint::from_usize(1 << ((1 << a) * b)).unwrap())
-}
-
-pub fn mix(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (a, b): (BigUint, BigUint) = FromNoun::from_noun(&arg).unwrap();
-
-    Noun::from(a ^ b)
-}
-
-pub fn met(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    if let Shape::Cell(ref bloq, ref b) = arg.get() {
-        let bloq: usize = FromNoun::from_noun(bloq).unwrap();
-
-        let bits = if let Shape::Atom(ref atom) = b.get() {
-            nock::msb(atom)
-        } else {
-            panic!("Bad atom");
-        } + (1 << bloq) - 1;
-
-        Noun::from(bits / (1 << bloq))
-    } else {
-        panic!("Bad argument");
+        fn match_jet(name: &str) -> Option<fn(&Noun) -> NockResult> {
+            match name {
+                $($name => Some($f as fn(&Noun) -> NockResult),)*
+                _ => None
+            }
+        }
     }
 }
 
-pub fn cut(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-
-    let (a, (mut b, mut c), mut d): (usize, (usize, usize), BigUint) = FromNoun::from_noun(&arg)
-                                                                           .unwrap();
-    b = b << a;
-    c = c << (1 << a);
-    d = d >> b;
-    d = d % BigUint::from_usize(c).unwrap();
-
-    Noun::from(d)
-}
-
-pub fn mug(subject: &Noun) -> Noun {
-    let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
-    Noun::from(arg.mug())
+match_jet!{
+    dec:  "dec",  wrap1;
+    bex:  "bex",  wrap1;
+    add:  "add",  wrap2;
+    mul:  "mul",  wrap2;
+    sub:  "sub",  wrap2;
+    div:  "div",  wrap2;
+    lth:  "lth",  wrap2;
+    rsh:  "rsh",  wrap3;
+    lsh:  "lsh",  wrap3;
+    mod_: "mod",  wrap2;
+    mix:  "mix",  wrap2;
+    met:  "met",  wrap2;
+    mug:  "mug",  wrap1;
+    end:  "end",  wrap3;
+    cut:  "cut",  wrap3;
 }

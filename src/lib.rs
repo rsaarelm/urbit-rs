@@ -14,6 +14,7 @@ use nock::{Nock, Noun, NockError, NockResult, Shape, FromNoun};
 use jet::Jet;
 
 mod jet;
+mod jets;
 
 /// An Urbit virtual machine.
 pub struct VM {
@@ -26,7 +27,7 @@ impl Nock for VM {
             jet.calls += 1;
 
             if let Some(f) = jet.jet {
-                return Some(Ok(f(subject)));
+                return Some(f(subject));
             }
         }
         None
