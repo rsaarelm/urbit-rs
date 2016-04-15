@@ -1,14 +1,13 @@
 #![feature(alloc_system)]
 
 extern crate alloc_system;
-extern crate bit_vec;
 extern crate num;
 extern crate fnv;
 #[macro_use]
 extern crate nock;
 
+use std::rc::Rc;
 use std::collections::HashMap;
-use bit_vec::BitVec;
 use num::{BigUint, One, ToPrimitive};
 use nock::{Nock, Noun, NockError, NockResult, Shape, FromNoun};
 use jet::Jet;
@@ -148,21 +147,16 @@ pub fn unpack_pill(mut buf: Vec<u8>) -> Result<Noun, &'static str> {
         buf.push(0);
     }
 
-    // Reverse bits of each byte to be little-endian all the way.
-    for i in 0..buf.len() {
-        let b = &mut buf[i];
-        *b = (*b & 0xF0) >> 4 | (*b & 0x0F) << 4;
-        *b = (*b & 0xCC) >> 2 | (*b & 0x33) << 2;
-        *b = (*b & 0xAA) >> 1 | (*b & 0x55) << 1;
-    }
+    cue(Rc::new(buf))
+}
 
-    let bits = BitVec::from_bytes(&buf);
-
-    cue(&bits)
+#[inline]
+fn bit(data: &[u8], pos: usize) -> bool {
+    data[pos / 8] & (1 << (pos % 8)) != 0
 }
 
 /// Decode a lenght-encoded atom from a bit stream.
-fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
+fn rub(data: Rc<Vec<u8>>, pos: usize) -> (usize, BigUint) {
     // Length of the prefix in bits is the count of initial zeroes before
     // the separator 1.
 
@@ -172,7 +166,7 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
     let mut k = 1;
     p += 1;
 
-    while !bits[pos + p] {
+    while !bit(&data, pos + p) {
         k += 1;
         p += 1;
     }
@@ -182,7 +176,7 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
     let mut b = 0;
     if k > 1 {
         for i in 0..(k - 2) {
-            if bits[pos + p] {
+            if bit(&data, pos + p) {
                 b += 1 << i;
             }
             p += 1;
@@ -193,7 +187,7 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
 
     let mut q: BigUint = Default::default();
     for i in 0..b {
-        if bits[pos + p] {
+        if bit(&data, pos + p) {
             q = q + (BigUint::one() << i);
         }
         p += 1;
@@ -204,23 +198,23 @@ fn rub(bits: &BitVec, pos: usize) -> (usize, BigUint) {
 /// Decode an encoded cell from a bit stream.
 ///
 /// Return the Nock noun.
-fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
-    let (_, noun) = try!(parse(0, bits, &mut Default::default()));
+fn cue(data: Rc<Vec<u8>>) -> Result<Noun, &'static str> {
+    let (_, noun) = try!(parse(0, data, &mut Default::default()));
     return Ok(noun);
 
     fn parse(mut pos: usize,
-             bits: &BitVec,
+             data: Rc<Vec<u8>>,
              dict: &mut HashMap<usize, Noun>)
              -> Result<(usize, Noun), &'static str> {
         let key = pos;
-        if bits[pos] {
+        if bit(&data, pos) {
             pos += 1;
-            if !bits[pos] {
+            if !bit(&data, pos) {
                 // 10: encode a pair.
                 pos += 1;
-                let (p, left) = try!(parse(pos, bits, dict));
+                let (p, left) = try!(parse(pos, data.clone(), dict));
                 pos = p;
-                let (p, right) = try!(parse(pos, bits, dict));
+                let (p, right) = try!(parse(pos, data.clone(), dict));
                 pos = p;
 
                 let ret = Noun::cell(left, right);
@@ -230,7 +224,7 @@ fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
                 // 11: Repeat element
                 // Read the index in bitstream where the value was first
                 // encountered.
-                let (p, q) = rub(&bits, pos);
+                let (p, q) = rub(data.clone(), pos);
                 pos += p;
                 let key = q.to_usize().unwrap();
                 if let Some(x) = dict.get(&key) {
@@ -241,7 +235,7 @@ fn cue(bits: &BitVec) -> Result<Noun, &'static str> {
             }
         } else {
             // Atom.
-            let (p, q) = rub(&bits, pos);
+            let (p, q) = rub(data.clone(), pos);
             pos += p;
             let ret = Noun::from(q);
             dict.insert(key, ret.clone());
