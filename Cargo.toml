@@ -1,6 +1,6 @@
 [package]
 name = "urbit"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Risto Saarelma <risto.saarelma@iki.fi>"]
 description = "Urbit utilities"
 repository = "https://github.com/rsaarelm/urbit-rs"
