@@ -137,4 +137,6 @@ match_jet!{
     mug:  "mug",  wrap1;
     end:  "end",  wrap3;
     cut:  "cut",  wrap3;
+    rub:  "rub",  wrap2;
+    cue:  "cue",  wrap1;
 }
