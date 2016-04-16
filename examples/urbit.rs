@@ -48,10 +48,11 @@ fn main() {
     println!("Kernel nocked, subject has {} atoms", get_size(&noun));
     println!("{}", noun);
 
+    println!("TODO: Boot arvo");
     // FIXME: This isn't the right way to boot...
-    println!("Nocking arvo");
-    let noun = vm.nock_on(Noun::from(0u32), arvo).unwrap();
-    vm.print_status();
-    println!("Arvo nocked, subject has {} atoms", get_size(&noun));
-    println!("{}", noun);
+    // println!("Nocking arvo");
+    // let noun = vm.nock_on(Noun::from(0u32), arvo).unwrap();
+    // vm.print_status();
+    // println!("Arvo nocked, subject has {} atoms", get_size(&noun));
+    // println!("{}", noun);
 }
