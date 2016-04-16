@@ -34,8 +34,7 @@ impl Nock for VM {
     fn hint(&mut self, subject: &Noun, hint: &Noun, c: &Noun) -> Result<(), NockError> {
         let (id, clue) = match hint.get() {
             Shape::Cell(ref p, ref q) => {
-                (p.clone(),
-                 try!(self.nock_on((*subject).clone(), (*q).clone())))
+                (p.clone(), try!(self.nock_on((*subject).clone(), (*q).clone())))
             }
             Shape::Atom(_) => (hint, Noun::from(0u32)),
         };
@@ -104,7 +103,8 @@ fn parse_fast_clue(clue: &Noun) -> Result<(String, u32, Vec<(String, Noun)>), No
             return Err(NockError(format!("hint")));
         };
 
-        let hooks: Vec<(String, Noun)> = try!(FromNoun::from_noun(hooks).map_err(|_| NockError(format!("hint"))));
+        let hooks: Vec<(String, Noun)> = try!(FromNoun::from_noun(hooks)
+                                                  .map_err(|_| NockError(format!("hint"))));
 
         Ok((chum, axis, hooks))
     } else {

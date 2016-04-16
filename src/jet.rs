@@ -62,9 +62,10 @@ impl hash::Hash for Jet {
 /// The argument will be extracted from axis 6 of subject.
 #[inline]
 fn wrap1<T1, U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
-where T1: FromNoun,
-      U: ToNoun,
-      F: Fn(T1) -> JetResult<U> {
+    where T1: FromNoun,
+          U: ToNoun,
+          F: Fn(T1) -> JetResult<U>
+{
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
     let t1: T1 = try!(FromNoun::from_noun(&arg));
     let ret = try!(f(t1).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
@@ -73,10 +74,11 @@ where T1: FromNoun,
 
 #[inline]
 fn wrap2<T1, T2, U, F>(jet_name: &str, f: F, subject: &Noun) -> NockResult
-where T1: FromNoun,
-      T2: FromNoun,
-      U: ToNoun,
-      F: Fn(T1, T2) -> JetResult<U> {
+    where T1: FromNoun,
+          T2: FromNoun,
+          U: ToNoun,
+          F: Fn(T1, T2) -> JetResult<U>
+{
     let arg = nock::get_axis(&Noun::from(6u32), subject).unwrap();
     let (t1, t2): (T1, T2) = try!(FromNoun::from_noun(&arg));
     let ret = try!(f(t1, t2).map_err(|e| NockError(format!("jet {} {}", jet_name, e))));
