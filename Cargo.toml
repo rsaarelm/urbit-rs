@@ -10,6 +10,4 @@ license = "MIT OR Apache-2.0"
 fnv = "1.0"
 time = "0.1"
 num = "0.1"
-
-[dependencies.nock]
-git = "https://github.com/rsaarelm/nock-rs"
+nock = "0.4"
