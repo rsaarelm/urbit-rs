@@ -34,7 +34,7 @@ impl Nock for VM {
     fn hint(&mut self, subject: &Noun, hint: &Noun, c: &Noun) -> Result<(), NockError> {
         let (id, clue) = match hint.get() {
             Shape::Cell(ref p, ref q) => {
-                (p.clone(), try!(self.nock_on((*subject).clone(), (*q).clone())))
+                (*p, try!(self.nock_on((*subject).clone(), (*q).clone())))
             }
             Shape::Atom(_) => (hint, Noun::from(0u32)),
         };
@@ -68,7 +68,7 @@ impl VM {
         let mut total_count = 0;
         let mut jets: Vec<&Jet> = self.jets.iter().map(|(_, x)| x).collect();
         jets.sort_by(|a, b| b.calls.cmp(&a.calls));
-        for jet in jets.iter() {
+        for jet in &jets {
             if jet.calls < 100 || (jet.calls as f32) / (total_count as f32) < 1e-6 {
                 // Don't care about the little things
                 println!(" ...");

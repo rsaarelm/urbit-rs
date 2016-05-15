@@ -96,7 +96,7 @@ pub fn end(bloq: usize, b: usize, c: Rc<Vec<u8>>) -> JetResult<Vec<u8>> {
 /// Slices `c` blocks of size `bloq` that are `b` blocks from the end of `d`.
 pub fn cut(bloq: usize, (b, c): (usize, usize), d: Rc<Vec<u8>>) -> JetResult<Vec<u8>> {
     let start_bit = b << bloq;
-    let end_bit = start_bit + c << bloq;
+    let end_bit = (start_bit + c) << bloq;
 
     if start_bit % 8 != 0 || end_bit % 8 != 0 {
         bail!("FIXME cut does not support non-byte offsets yet");
