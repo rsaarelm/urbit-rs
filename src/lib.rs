@@ -1,9 +1,5 @@
-#![feature(alloc_system)]
-
-extern crate alloc_system;
 extern crate num;
 extern crate fnv;
-#[macro_use]
 extern crate nock;
 
 use std::rc::Rc;
